@@ -30,6 +30,7 @@ namespace MultiplayerGame
         [SerializeField] private float wallHeight = 5f;
         
         [Header("Networking Settings")]
+        [SerializeField] private bool useLocalhostInBuild = false;
         [SerializeField] private string serverUrl = "http://127.0.0.1:8000";
         [SerializeField] private string wsUrl = "ws://127.0.0.1:8000";
         
@@ -37,6 +38,7 @@ namespace MultiplayerGame
         [SerializeField] private GameObject playerPrefab;
         [SerializeField] private GameObject spectatorCameraPrefab;
         [SerializeField] private GameObject interactableObjectPrefab;
+        [SerializeField] private GameObject multiplayerDebugUIPrefab;
         
         [Header("Test Objects")]
         [SerializeField] private bool spawnTestObjects = true;
@@ -46,6 +48,9 @@ namespace MultiplayerGame
         [SerializeField] private bool spawnTestPlayer = true;
         [SerializeField] private Vector3 testPlayerSpawnPosition = new Vector3(0, 1, 0);
         [SerializeField] private Color testPlayerColor = Color.cyan;
+
+        [Header("Debug")]
+        [SerializeField] private bool spawnDebugUI = true;
 
         private GameObject networkManagerObj;
         private GameObject gameStateManagerObj;
@@ -81,6 +86,9 @@ namespace MultiplayerGame
             
             if (setupNetworking)
                 SetupNetworkingComponents();
+
+            if (spawnDebugUI)
+                SetupDebugUI();
             
             if (spawnTestObjects)
                 SpawnTestObjects();
@@ -89,6 +97,26 @@ namespace MultiplayerGame
                 SpawnTestPlayer();
             
             Debug.Log("Main scene setup complete!");
+        }
+
+        private void SetupDebugUI()
+        {
+            if (GameObject.FindObjectOfType<MultiplayerDebugUI>() == null)
+            {
+                if (multiplayerDebugUIPrefab != null)
+                {
+                    Instantiate(multiplayerDebugUIPrefab);
+                    Debug.Log("[MainSceneSetup] Spawned Debug UI from prefab");
+                }
+                else
+                {
+                    // Create programmatically if no prefab
+                    GameObject debugObj = new GameObject("MultiplayerDebugUI");
+                    var debugUI = debugObj.AddComponent<MultiplayerDebugUI>();
+                    debugUI.CreateDebugUI();
+                    Debug.Log("[MainSceneSetup] Created Debug UI programmatically");
+                }
+            }
         }
 
         private void SetupTopDownCamera()
@@ -277,16 +305,26 @@ namespace MultiplayerGame
                 }
                 
                 // Configure server URLs using reflection since they're private serialized fields
-                var netManagerType = typeof(NetworkManager);
-                var serverUrlField = netManagerType.GetField("serverUrl", 
-                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                var wsUrlField = netManagerType.GetField("wsUrl", 
-                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                
-                if (serverUrlField != null)
-                    serverUrlField.SetValue(netManager, serverUrl);
-                if (wsUrlField != null)
-                    wsUrlField.SetValue(netManager, wsUrl);
+                // Only override if in Editor or if explicitly requested for build (e.g. testing local build)
+                if (Application.isEditor || useLocalhostInBuild)
+                {
+                    Debug.Log($"[MainSceneSetup] Overriding NetworkManager URLs with: {serverUrl} (Localhost/Override)");
+                    
+                    var netManagerType = typeof(NetworkManager);
+                    var serverUrlField = netManagerType.GetField("serverUrl", 
+                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    var wsUrlField = netManagerType.GetField("wsUrl", 
+                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    
+                    if (serverUrlField != null)
+                        serverUrlField.SetValue(netManager, serverUrl);
+                    if (wsUrlField != null)
+                        wsUrlField.SetValue(netManager, wsUrl);
+                }
+                else
+                {
+                     Debug.Log("[MainSceneSetup] Using default NetworkManager URLs (Production/Build)");
+                }
             }
             else
             {
@@ -317,9 +355,24 @@ namespace MultiplayerGame
                 System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
             
             if (playerPrefabField != null && playerPrefab != null)
+            {
                 playerPrefabField.SetValue(stateManager, playerPrefab);
+                Debug.Log($"[MainSceneSetup] ✓ Assigned player prefab to GameStateManager: {playerPrefab.name}");
+            }
+            else if (playerPrefab == null)
+            {
+                Debug.LogWarning("[MainSceneSetup] No player prefab assigned in MainSceneSetup. GameStateManager will create a default one.");
+            }
+            
             if (spectatorPrefabField != null && spectatorCameraPrefab != null)
+            {
                 spectatorPrefabField.SetValue(stateManager, spectatorCameraPrefab);
+                Debug.Log($"[MainSceneSetup] ✓ Assigned spectator prefab to GameStateManager: {spectatorCameraPrefab.name}");
+            }
+            else if (spectatorCameraPrefab == null)
+            {
+                Debug.LogWarning("[MainSceneSetup] No spectator camera prefab assigned in MainSceneSetup.");
+            }
             
             Debug.Log("Networking components configured");
         }
@@ -362,9 +415,19 @@ namespace MultiplayerGame
                     System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                 
                 if (player1SpawnField != null)
+                {
                     player1SpawnField.SetValue(stateManager, player1Spawn.transform);
+                    Debug.Log($"[MainSceneSetup] ✓ Assigned Player 1 spawn point: {player1Spawn.transform.position}");
+                }
                 if (player2SpawnField != null)
+                {
                     player2SpawnField.SetValue(stateManager, player2Spawn.transform);
+                    Debug.Log($"[MainSceneSetup] ✓ Assigned Player 2 spawn point: {player2Spawn.transform.position}");
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[MainSceneSetup] GameStateManager not found, cannot assign spawn points");
             }
             
             Debug.Log("Spawn points created and assigned");

@@ -16,12 +16,13 @@ namespace MultiplayerGame
         public static NetworkManager Instance { get; private set; }
 
         [Header("Server Configuration")]
-        [SerializeField] private string serverUrl = "http://127.0.0.1:8000";
-        [SerializeField] private string wsUrl = "ws://127.0.0.1:8000";
+        [SerializeField] private string serverUrl = "https://aims-rangers-theorem-association.trycloudflare.com";
+        [SerializeField] private string wsUrl = "wss://aims-rangers-theorem-association.trycloudflare.com/ws";
 
         [Header("Player Info")]
         public string PlayerId { get; private set; }
         public string CurrentRoomId { get; private set; }
+        public Room CurrentRoom { get; private set; } // Cache the full room object
         public bool IsPlayer { get; private set; } // true = player, false = spectator
         public int PlayerNumber { get; private set; } // 1 or 2 for players, 0 for spectators
         public bool IsReadyForRoomOperations => isPlayerRegistered; // Check if connected to backend
@@ -33,6 +34,7 @@ namespace MultiplayerGame
         public event Action<List<Room>> OnRoomListUpdated;
         public event Action<PlayerAction> OnPlayerActionReceived;
         public event Action<GameState> OnGameStateUpdated;
+        public event Action OnGameStarted;
         public event Action<string> OnError;
 
         private WebSocketClient webSocket;
@@ -121,6 +123,7 @@ namespace MultiplayerGame
                     Debug.Log($"[NetworkManager] ✓ Room created successfully!");
                     Room room = JsonUtility.FromJson<Room>(request.downloadHandler.text);
                     CurrentRoomId = room.room_id;
+                    CurrentRoom = room; // Cache room
                     IsPlayer = true;
                     PlayerNumber = 1; // Host is always player 1
                     Debug.Log($"[NetworkManager] Room ID: {room.room_id}, Player Number: {PlayerNumber}");
@@ -139,6 +142,16 @@ namespace MultiplayerGame
             }
         }
 
+        // ... GetRoomList (omitted for brevity, assume unchanged or use view_file to integrity check if needed) ...
+        // Note: replace_file_content expects a CONTIGUOUS block. I must include GetRoomList if I span across it? 
+        // Actually I'll just skip GetRoomList in this replacement chunk if I can.
+        // But GetRoomDetails is further down.
+        // Let's just do CurrentRoomId property and CreateRoom first. 
+        // Wait, I can't skip deeply. I'll split this or just assume I need to handle GetRoomDetails in a separate chunk using multi_replace?
+        // Ah, current tool is replace_file_content (single block).
+        // I should probably use multi_replace for NetworkManager to touch CreateRoom, properties, GetRoomDetails, LeaveRoom.
+
+
         /// <summary>
         /// Get list of available rooms
         /// </summary>
@@ -150,6 +163,7 @@ namespace MultiplayerGame
         private IEnumerator GetRoomListCoroutine(bool includePrivate)
         {
             string url = $"{serverUrl}/api/rooms/?include_private={includePrivate}";
+            Debug.Log($"[NetworkManager] ========== Getting Room List ==========");
             Debug.Log($"[NetworkManager] GET {url}");
 
             using (UnityWebRequest request = UnityWebRequest.Get(url))
@@ -157,14 +171,40 @@ namespace MultiplayerGame
                 yield return request.SendWebRequest();
 
                 Debug.Log($"[NetworkManager] Response Code: {request.responseCode}");
+                Debug.Log($"[NetworkManager] Response Body: {request.downloadHandler.text}");
 
                 if (request.result == UnityWebRequest.Result.Success)
                 {
                     string json = request.downloadHandler.text;
-                    Debug.Log($"[NetworkManager] ✓ Room list received: {json}");
-                    RoomList roomList = JsonUtility.FromJson<RoomList>("{\"rooms\":" + json + "}");
-                    Debug.Log($"[NetworkManager] Found {roomList.rooms.Count} rooms");
-                    OnRoomListUpdated?.Invoke(roomList.rooms);
+                    Debug.Log($"[NetworkManager] ✓ Room list received successfully");
+                    Debug.Log($"[NetworkManager] Raw JSON: {json}");
+                    
+                    // Wrap the array in an object for Unity's JsonUtility
+                    string wrappedJson = "{\"rooms\":" + json + "}";
+                    Debug.Log($"[NetworkManager] Wrapped JSON: {wrappedJson}");
+                    
+                    RoomList roomList = JsonUtility.FromJson<RoomList>(wrappedJson);
+                    
+                    if (roomList == null)
+                    {
+                        Debug.LogError("[NetworkManager] ✗ Failed to parse room list - roomList is null!");
+                        OnRoomListUpdated?.Invoke(new List<Room>());
+                    }
+                    else if (roomList.rooms == null)
+                    {
+                        Debug.LogError("[NetworkManager] ✗ Failed to parse room list - rooms array is null!");
+                        OnRoomListUpdated?.Invoke(new List<Room>());
+                    }
+                    else
+                    {
+                        Debug.Log($"[NetworkManager] ✓ Parsed {roomList.rooms.Count} rooms");
+                        for (int i = 0; i < roomList.rooms.Count; i++)
+                        {
+                            var room = roomList.rooms[i];
+                            Debug.Log($"[NetworkManager]   Room {i + 1}: '{room.name}' (ID: {room.room_id}, Players: {room.current_players?.Count ?? 0}/{room.max_players})");
+                        }
+                        OnRoomListUpdated?.Invoke(roomList.rooms);
+                    }
                 }
                 else
                 {
@@ -172,7 +212,11 @@ namespace MultiplayerGame
                     Debug.LogError($"[NetworkManager] ✗ {errorMsg}");
                     Debug.LogError($"[NetworkManager] Response: {request.downloadHandler.text}");
                     OnError?.Invoke(errorMsg);
+                    // Invoke with empty list so UI knows request completed
+                    OnRoomListUpdated?.Invoke(new List<Room>());
                 }
+                
+                Debug.Log($"[NetworkManager] ========== Room List Request Complete ==========");
             }
         }
 
@@ -244,6 +288,7 @@ namespace MultiplayerGame
                 {
                     Room room = JsonUtility.FromJson<Room>(request.downloadHandler.text);
                     CurrentRoomId = room.room_id;
+                    CurrentRoom = room; // Cache room
                     
                     // Determine player role (first 2 are players, rest are spectators)
                     int playerIndex = room.current_players.IndexOf(PlayerId);
@@ -312,9 +357,48 @@ namespace MultiplayerGame
 
                 DisconnectWebSocket();
                 CurrentRoomId = null;
+                CurrentRoom = null; // Clear cached room
                 IsPlayer = false;
                 PlayerNumber = 0;
                 OnRoomLeft?.Invoke();
+            }
+        }
+
+        /// <summary>
+        /// Start the game for the current room
+        /// </summary>
+        public void StartGame()
+        {
+            if (string.IsNullOrEmpty(CurrentRoomId))
+                return;
+
+            StartCoroutine(StartGameCoroutine());
+        }
+
+        private IEnumerator StartGameCoroutine()
+        {
+            string url = $"{serverUrl}/api/rooms/{CurrentRoomId}/start?player_id={PlayerId}";
+            Debug.Log($"[NetworkManager] Starting game: {CurrentRoomId}");
+            Debug.Log($"[NetworkManager] POST {url}");
+
+            using (UnityWebRequest request = new UnityWebRequest(url, "POST"))
+            {
+                request.downloadHandler = new DownloadHandlerBuffer();
+                yield return request.SendWebRequest();
+
+                Debug.Log($"[NetworkManager] Response Code: {request.responseCode}");
+                
+                if (request.result == UnityWebRequest.Result.Success)
+                {
+                    Debug.Log($"[NetworkManager] ✓ Game started successfully, waiting for WebSocket notification...");
+                }
+                else
+                {
+                    string errorMsg = $"Failed to start game: {request.error} (Code: {request.responseCode})";
+                    Debug.LogError($"[NetworkManager] ✗ {errorMsg}");
+                    Debug.LogError($"[NetworkManager] Response: {request.downloadHandler.text}");
+                    OnError?.Invoke(errorMsg);
+                }
             }
         }
 
@@ -405,14 +489,15 @@ namespace MultiplayerGame
                 return;
             }
 
-            var joinMessage = new
+            var joinData = new WSJoinData
             {
-                type = "JOIN_ROOM",
-                data = new
-                {
-                    room_id = CurrentRoomId,
-                    username = PlayerId
-                }
+                room_id = CurrentRoomId,
+                username = PlayerId
+            };
+
+            var joinMessage = new WSJoinMessage
+            {
+                data = joinData
             };
 
             string json = JsonUtility.ToJson(joinMessage);
@@ -468,19 +553,32 @@ namespace MultiplayerGame
                         break;
                     
                     case "PLAYER_ACTION":
-                        Debug.Log($"[NetworkManager] Player action received");
-                        var actionData = JsonUtility.FromJson<PlayerActionData>(msgWrapper.data);
-                        Debug.Log($"[NetworkManager] Action type: {actionData.action_type}");
+                    case "player_action": // Handle lowercase type as per requirements
+                        // Debug.Log($"[NetworkManager] Player action received");
                         
-                        // Convert to PlayerAction format
-                        var action = new PlayerAction
+                        // We need to parse specifically for this type because 'data' is an object, not a string
+                        var detailedMsg = JsonUtility.FromJson<ReplicationMessage>(message);
+                        
+                        if (detailedMsg != null && detailedMsg.data != null)
                         {
-                            player_id = msgWrapper.sender_id,
-                            action_type = actionData.action_type,
-                            // Parse action_data based on type
-                        };
-                        
-                        OnPlayerActionReceived?.Invoke(action);
+                            // Convert to internal PlayerAction format
+                            var action = new PlayerAction
+                            {
+                                player_id = detailedMsg.data.player_id,
+                                action_type = detailedMsg.data.action_type,
+                                // Provide default/empty values if null
+                                position = detailedMsg.data.action_data?.position?.ToVector3() ?? Vector3.zero,
+                                rotation = detailedMsg.data.action_data?.rotation?.ToQuaternion() ?? Quaternion.identity,
+                                target_object_id = detailedMsg.data.action_data?.target_object_id
+                            };
+                            
+                            OnPlayerActionReceived?.Invoke(action);
+                        }
+                        else 
+                        {
+                            // Fallback for flat format if necessary, or just log warning
+                            Debug.LogWarning("[NetworkManager] Failed to parse detailed player_action");
+                        }
                         break;
                     
                     case "STATE_UPDATE":
@@ -495,6 +593,12 @@ namespace MultiplayerGame
                         OnError?.Invoke(errorData.error);
                         break;
                     
+                    case "game_start":
+                    case "START_GAME":
+                        Debug.Log($"[NetworkManager] Game start notification received!");
+                        OnGameStarted?.Invoke();
+                        break;
+
                     case "HEARTBEAT":
                         // Respond to heartbeat
                         SendHeartbeat();
@@ -517,11 +621,7 @@ namespace MultiplayerGame
 
         private void SendHeartbeat()
         {
-            var heartbeat = new
-            {
-                type = "HEARTBEAT",
-                data = new { }
-            };
+            var heartbeat = new WSHeartbeat();
             string json = JsonUtility.ToJson(heartbeat);
             webSocket?.Send(json);
         }
@@ -533,7 +633,10 @@ namespace MultiplayerGame
         /// <summary>
         /// Send a player action to the server
         /// </summary>
-        public void SendPlayerAction(string actionType, string targetObjectId = null, Vector3? position = null, Dictionary<string, object> extraData = null)
+        /// <summary>
+        /// Send a player action to the server
+        /// </summary>
+        public void SendPlayerAction(string actionType, string targetObjectId = null, Vector3? position = null, Quaternion? rotation = null, Dictionary<string, object> extraData = null)
         {
             if (!IsPlayer || !isConnected)
             {
@@ -541,50 +644,54 @@ namespace MultiplayerGame
                 return;
             }
 
-            // Build action_data based on action type
-            var actionData = new Dictionary<string, object>();
+            // Build payload
+            var payload = new WSPlayerActionPayload();
             
             if (position.HasValue)
             {
-                actionData["position"] = new { x = position.Value.x, y = position.Value.y, z = position.Value.z };
+                payload.position = new PacketVector3(position.Value);
+            }
+            if (rotation.HasValue)
+            {
+                payload.rotation = new PacketVector3(rotation.Value.eulerAngles);
             }
             
             if (!string.IsNullOrEmpty(targetObjectId))
             {
-                actionData["target_object_id"] = targetObjectId;
+                payload.target_object_id = targetObjectId;
             }
             
-            // Add extra data if provided
-            if (extraData != null)
-            {
-                foreach (var kvp in extraData)
-                {
-                    actionData[kvp.Key] = kvp.Value;
-                }
-            }
+            // Note: extraData is ignored here because JsonUtility doesn't support dictionaries
+            // If we need extra data, we should add fields to WSPlayerActionPayload
 
-            var message = new
+            var request = new WSPlayerActionRequest
             {
-                type = "PLAYER_ACTION",
-                data = new
-                {
-                    action_type = actionType,
-                    action_data = actionData
-                }
+                action_type = actionType,
+                action_data = payload
+            };
+
+            var message = new WSPlayerActionMessage
+            {
+                data = request
             };
 
             string json = JsonUtility.ToJson(message);
             Debug.Log($"[NetworkManager] Sending {actionType} action");
-            Debug.Log($"[NetworkManager] Action JSON: {json}");
+            // Debug.Log($"[NetworkManager] Action JSON: {json}"); // noisy
             webSocket?.Send(json);
         }
 
         /// <summary>
         /// Send move action
         /// </summary>
+        public void SendMoveAction(Vector3 position, Quaternion rotation)
+        {
+            SendPlayerAction("move", null, position, rotation);
+        }
+
         public void SendMoveAction(Vector3 position)
         {
-            SendPlayerAction("move", null, position);
+            SendMoveAction(position, Quaternion.identity);
         }
 
         /// <summary>
@@ -707,9 +814,91 @@ namespace MultiplayerGame
         public string action_type; // "move", "grab", "cut", "break"
         public string target_object_id;
         public Vector3 position;
+        public Quaternion rotation;
         public string timestamp;
-        public Dictionary<string, object> data;
     }
+
+    [Serializable]
+    public class WSJoinMessage
+    {
+        public string type = "JOIN_ROOM";
+        public WSJoinData data;
+    }
+
+    [Serializable]
+    public class WSJoinData
+    {
+        public string room_id;
+        public string username;
+    }
+
+    [Serializable]
+    public class WSPlayerActionMessage
+    {
+        public string type = "PLAYER_ACTION";
+        public WSPlayerActionRequest data;
+    }
+
+    [Serializable]
+    public class WSPlayerActionRequest
+    {
+        public string action_type;
+        public WSPlayerActionPayload action_data;
+    }
+
+    [Serializable]
+    public class WSPlayerActionPayload
+    {
+        public PacketVector3 position;
+        public PacketVector3 rotation;
+        public string target_object_id;
+    }
+
+    [Serializable]
+    public class PacketVector3
+    {
+        public float x;
+        public float y;
+        public float z;
+        
+        public PacketVector3(Vector3 v)
+        {
+            x = v.x;
+            y = v.y;
+            z = v.z;
+        }
+
+        public Vector3 ToVector3()
+        {
+            return new Vector3(x, y, z);
+        }
+
+        public Quaternion ToQuaternion()
+        {
+            return Quaternion.Euler(x, y, z);
+        }
+    }
+
+    [Serializable]
+    public class WSHeartbeat
+    {
+        public string type = "HEARTBEAT";
+        // Empty data object for JsonUtility is tricky, so we'll just not send data if not needed, 
+        // or we can send a dummy string. 
+        // Backend probably ignores data for heartbeat.
+        // Let's try sending an empty string for data if that structure is required.
+        // Or if backend expects specific structure.
+        // Previous code sent `data = new {}` which results in "data": {}
+        // To get "data": {} with JsonUtility, we need a class.
+        public HeartbeatData data = new HeartbeatData();
+    }
+
+    [Serializable]
+    public class HeartbeatData
+    {
+    }
+
+
 
     [Serializable]
     public class GameState
@@ -736,6 +925,30 @@ namespace MultiplayerGame
         public Quaternion rotation;
         public bool is_grabbed;
         public string grabbed_by_player_id;
+    }
+
+    [Serializable]
+    public class ReplicationMessage
+    {
+        public string type;
+        public ReplicationData data;
+    }
+
+    [Serializable]
+    public class ReplicationData
+    {
+        public string player_id;
+        public string action_type;
+        public ReplicationActionData action_data;
+    }
+
+    [Serializable]
+    public class ReplicationActionData
+    {
+        public PacketVector3 position;
+        public PacketVector3 rotation;
+        public string target_object_id;
+        public bool is_running; // from requirements example
     }
 
     #endregion

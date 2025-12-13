@@ -34,25 +34,99 @@ namespace MultiplayerGame
         {
             try
             {
+                Debug.Log($"[WebSocketClient] ========== Connecting to WebSocket ==========");
+                Debug.Log($"[WebSocketClient] URL: {url}");
+                Debug.Log($"[WebSocketClient] Validating URL format...");
+                
+                // Validate URL format
+                Uri uri;
+                try
+                {
+                    uri = new Uri(url);
+                    Debug.Log($"[WebSocketClient] ✓ URL is valid");
+                    Debug.Log($"[WebSocketClient]   Scheme: {uri.Scheme}");
+                    Debug.Log($"[WebSocketClient]   Host: {uri.Host}");
+                    Debug.Log($"[WebSocketClient]   Port: {uri.Port}");
+                    Debug.Log($"[WebSocketClient]   Path: {uri.AbsolutePath}");
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"[WebSocketClient] ✗ Invalid URL format: {ex.Message}");
+                    OnError?.Invoke($"Invalid WebSocket URL: {ex.Message}");
+                    return;
+                }
+                
+                Debug.Log($"[WebSocketClient] Creating WebSocket client...");
                 webSocket = new ClientWebSocket();
+                
+                // Configure WebSocket options for better compatibility
+                webSocket.Options.KeepAliveInterval = TimeSpan.FromSeconds(20);
+                Debug.Log($"[WebSocketClient] ✓ Keep-alive interval set to 20 seconds");
+                
                 cancellationTokenSource = new CancellationTokenSource();
                 
-                await webSocket.ConnectAsync(new Uri(url), cancellationTokenSource.Token);
+                Debug.Log($"[WebSocketClient] Attempting connection...");
+                Debug.Log($"[WebSocketClient] This may take a few seconds...");
+                
+                await webSocket.ConnectAsync(uri, cancellationTokenSource.Token);
+                
+                Debug.Log($"[WebSocketClient] ✓ Connection established!");
+                Debug.Log($"[WebSocketClient] WebSocket State: {webSocket.State}");
+                
                 isRunning = true;
                 OnConnected?.Invoke();
                 
+                Debug.Log($"[WebSocketClient] Starting receive loop...");
                 // Start receiving messages
                 _ = ReceiveLoop();
+                
+                Debug.Log($"[WebSocketClient] ========== WebSocket Connected Successfully ==========");
+            }
+            catch (WebSocketException wsEx)
+            {
+                string errorDetails = $"WebSocket connection failed: {wsEx.Message}";
+                Debug.LogError($"[WebSocketClient] ✗ {errorDetails}");
+                Debug.LogError($"[WebSocketClient] WebSocketErrorCode: {wsEx.WebSocketErrorCode}");
+                Debug.LogError($"[WebSocketClient] NativeErrorCode: {wsEx.NativeErrorCode}");
+                Debug.LogError($"[WebSocketClient] Stack Trace: {wsEx.StackTrace}");
+                
+                // Provide user-friendly error messages
+                string userMessage = wsEx.WebSocketErrorCode switch
+                {
+                    WebSocketError.ConnectionClosedPrematurely => "Connection closed unexpectedly. The server may be offline or unreachable.",
+                    WebSocketError.Faulted => "Connection faulted. Check if the server is running and accessible from this network.",
+                    WebSocketError.HeaderError => "Invalid WebSocket headers. The server may not support WebSocket connections.",
+                    WebSocketError.InvalidState => "Invalid connection state. Try restarting the application.",
+                    _ => $"Connection failed: {wsEx.Message}. Ensure the server is running and accessible from this PC."
+                };
+                
+                OnError?.Invoke(userMessage);
+            }
+            catch (TaskCanceledException)
+            {
+                string errorMsg = "Connection timeout. The server may be unreachable from this network.";
+                Debug.LogError($"[WebSocketClient] ✗ {errorMsg}");
+                Debug.LogError($"[WebSocketClient] Possible causes:");
+                Debug.LogError($"[WebSocketClient]   - Server is not running");
+                Debug.LogError($"[WebSocketClient]   - Firewall blocking connection");
+                Debug.LogError($"[WebSocketClient]   - Server not bound to 0.0.0.0 (only listening on localhost)");
+                Debug.LogError($"[WebSocketClient]   - Network connectivity issues");
+                OnError?.Invoke(errorMsg);
             }
             catch (Exception e)
             {
-                OnError?.Invoke($"Connection failed: {e.Message}");
+                string errorMsg = $"Connection failed: {e.Message}";
+                Debug.LogError($"[WebSocketClient] ✗ {errorMsg}");
+                Debug.LogError($"[WebSocketClient] Exception Type: {e.GetType().Name}");
+                Debug.LogError($"[WebSocketClient] Stack Trace: {e.StackTrace}");
+                OnError?.Invoke(errorMsg);
             }
         }
 
         private async Task ReceiveLoop()
         {
             var buffer = new byte[1024 * 4];
+            Debug.Log($"[WebSocketClient] Receive loop started");
             
             while (isRunning && webSocket.State == WebSocketState.Open)
             {
@@ -62,6 +136,7 @@ namespace MultiplayerGame
                     
                     if (result.MessageType == WebSocketMessageType.Close)
                     {
+                        Debug.LogWarning($"[WebSocketClient] Server initiated close. Status: {result.CloseStatus}, Reason: {result.CloseStatusDescription}");
                         await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "", CancellationToken.None);
                         OnDisconnected?.Invoke();
                         break;
@@ -69,18 +144,32 @@ namespace MultiplayerGame
                     else
                     {
                         string message = Encoding.UTF8.GetString(buffer, 0, result.Count);
+                        Debug.Log($"[WebSocketClient] ← Received {result.Count} bytes");
                         OnMessage?.Invoke(message);
                     }
+                }
+                catch (WebSocketException wsEx)
+                {
+                    if (isRunning)
+                    {
+                        Debug.LogError($"[WebSocketClient] WebSocket receive error: {wsEx.Message}");
+                        Debug.LogError($"[WebSocketClient] WebSocketErrorCode: {wsEx.WebSocketErrorCode}");
+                        OnError?.Invoke($"Connection lost: {wsEx.Message}");
+                    }
+                    break;
                 }
                 catch (Exception e)
                 {
                     if (isRunning)
                     {
+                        Debug.LogError($"[WebSocketClient] Receive error: {e.Message}");
                         OnError?.Invoke($"Receive error: {e.Message}");
                     }
                     break;
                 }
             }
+            
+            Debug.Log($"[WebSocketClient] Receive loop ended. State: {webSocket?.State}, isRunning: {isRunning}");
         }
 
         public async void Send(string message)

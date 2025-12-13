@@ -186,19 +186,43 @@ namespace MultiplayerGame.UI
             listRect.anchorMin = new Vector2(0.1f, 0.2f);
             listRect.anchorMax = new Vector2(0.9f, 0.8f);
             listRect.sizeDelta = Vector2.zero;
+            
+            // Add VerticalLayoutGroup for automatic layout
+            VerticalLayoutGroup layout = listContainer.AddComponent<VerticalLayoutGroup>();
+            layout.spacing = 10;
+            layout.childAlignment = TextAnchor.UpperCenter;
+            layout.childControlWidth = true;
+            layout.childControlHeight = false;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = false;
+
+            // "No Rooms" text
+            GameObject noRoomsText = CreateText(parent, "NoRoomsText", "No rooms available.\nClick 'Create Room' to start a new game!", 24, TextAlignmentOptions.Center);
+            RectTransform noRoomsRect = noRoomsText.GetComponent<RectTransform>();
+            noRoomsRect.anchorMin = new Vector2(0.5f, 0.5f);
+            noRoomsRect.anchorMax = new Vector2(0.5f, 0.5f);
+            noRoomsRect.sizeDelta = new Vector2(600, 100);
+            noRoomsText.SetActive(false); // Hidden by default
+
+            // Create Room Button
+            GameObject createBtn = CreateButton(parent, "CreateRoomButton", "Create Room", 200, 60);
+            RectTransform createRect = createBtn.GetComponent<RectTransform>();
+            createRect.anchorMin = new Vector2(0.5f, 0.1f);
+            createRect.anchorMax = new Vector2(0.5f, 0.1f);
+            createRect.anchoredPosition = new Vector2(0, 0);
 
             // Refresh Button
             GameObject refreshBtn = CreateButton(parent, "RefreshButton", "Refresh", 200, 60);
             RectTransform refreshRect = refreshBtn.GetComponent<RectTransform>();
-            refreshRect.anchorMin = new Vector2(0.3f, 0.1f);
-            refreshRect.anchorMax = new Vector2(0.3f, 0.1f);
+            refreshRect.anchorMin = new Vector2(0.25f, 0.1f);
+            refreshRect.anchorMax = new Vector2(0.25f, 0.1f);
             refreshRect.anchoredPosition = new Vector2(0, 0);
 
             // Back Button
             GameObject backBtn = CreateButton(parent, "BackToMenuButton", "Back", 200, 60);
             RectTransform backRect = backBtn.GetComponent<RectTransform>();
-            backRect.anchorMin = new Vector2(0.7f, 0.1f);
-            backRect.anchorMax = new Vector2(0.7f, 0.1f);
+            backRect.anchorMin = new Vector2(0.75f, 0.1f);
+            backRect.anchorMax = new Vector2(0.75f, 0.1f);
             backRect.anchoredPosition = new Vector2(0, 0);
         }
 
@@ -394,6 +418,58 @@ namespace MultiplayerGame.UI
             return inputObj;
         }
 
+        private GameObject CreateRoomListItemPrefab()
+        {
+            GameObject prefab = new GameObject("RoomListItemPrefab");
+            RectTransform rect = prefab.AddComponent<RectTransform>();
+            rect.sizeDelta = new Vector2(700, 80);
+
+            // Background
+            Image bg = prefab.AddComponent<Image>();
+            bg.color = new Color(0.15f, 0.15f, 0.2f);
+
+            // Room Name Text
+            GameObject nameText = CreateText(prefab.transform, "RoomName", "Room Name", 24, TextAlignmentOptions.Left);
+            RectTransform nameRect = nameText.GetComponent<RectTransform>();
+            nameRect.anchorMin = new Vector2(0, 0.5f);
+            nameRect.anchorMax = new Vector2(0, 0.5f);
+            nameRect.anchoredPosition = new Vector2(20, 0);
+            nameRect.sizeDelta = new Vector2(400, 40);
+
+            // Player Count Text
+            GameObject countText = CreateText(prefab.transform, "PlayerCount", "0/4", 20, TextAlignmentOptions.Center);
+            RectTransform countRect = countText.GetComponent<RectTransform>();
+            countRect.anchorMin = new Vector2(0.6f, 0.5f);
+            countRect.anchorMax = new Vector2(0.6f, 0.5f);
+            countRect.anchoredPosition = new Vector2(0, 0);
+            countRect.sizeDelta = new Vector2(100, 30);
+
+            // Join Button
+            GameObject joinBtn = CreateButton(prefab.transform, "JoinButton", "Join", 120, 50);
+            RectTransform joinRect = joinBtn.GetComponent<RectTransform>();
+            joinRect.anchorMin = new Vector2(1, 0.5f);
+            joinRect.anchorMax = new Vector2(1, 0.5f);
+            joinRect.anchoredPosition = new Vector2(-70, 0);
+
+            return prefab;
+        }
+
+        private GameObject CreatePlayerListItemPrefab()
+        {
+            GameObject prefab = new GameObject("PlayerListItemPrefab");
+            RectTransform rect = prefab.AddComponent<RectTransform>();
+            rect.sizeDelta = new Vector2(400, 40);
+
+            // Player text
+            TextMeshProUGUI text = prefab.AddComponent<TextMeshProUGUI>();
+            text.text = "Player Name (Role)";
+            text.fontSize = 20;
+            text.color = textColor;
+            text.alignment = TextAlignmentOptions.Center;
+
+            return prefab;
+        }
+
         private void AssignRoomUIReferences(RoomUI roomUI, GameObject canvas)
         {
             var roomUIType = typeof(RoomUI);
@@ -417,8 +493,21 @@ namespace MultiplayerGame.UI
                 canvas.transform.Find("RoomBrowserPanel/RoomListContainer"));
             AssignField(roomUIType, roomUI, "refreshButton", 
                 canvas.transform.Find("RoomBrowserPanel/RefreshButton")?.GetComponent<Button>());
+            AssignField(roomUIType, roomUI, "createRoomButton", 
+                canvas.transform.Find("RoomBrowserPanel/CreateRoomButton")?.GetComponent<Button>());
             AssignField(roomUIType, roomUI, "backToMenuButton", 
                 canvas.transform.Find("RoomBrowserPanel/BackToMenuButton")?.GetComponent<Button>());
+            AssignField(roomUIType, roomUI, "noRoomsText", 
+                canvas.transform.Find("RoomBrowserPanel/NoRoomsText")?.GetComponent<TextMeshProUGUI>());
+            
+            // Create and assign prefabs
+            GameObject roomListItemPrefab = CreateRoomListItemPrefab();
+            roomListItemPrefab.SetActive(false); // Prefabs should be inactive
+            AssignField(roomUIType, roomUI, "roomListItemPrefab", roomListItemPrefab);
+            
+            GameObject playerListItemPrefab = CreatePlayerListItemPrefab();
+            playerListItemPrefab.SetActive(false); // Prefabs should be inactive
+            AssignField(roomUIType, roomUI, "playerListItemPrefab", playerListItemPrefab);
 
             // Create Room
             AssignField(roomUIType, roomUI, "roomNameInput", 

@@ -27,6 +27,7 @@ namespace MultiplayerGame.UI
         [SerializeField] private Button refreshButton;
         [SerializeField] private Button createRoomButton;
         [SerializeField] private Button backToMenuButton;
+        [SerializeField] private TextMeshProUGUI noRoomsText;
 
         [Header("Create Room")]
         [SerializeField] private TMP_InputField roomNameInput;
@@ -57,6 +58,21 @@ namespace MultiplayerGame.UI
             Debug.Log($"[RoomUI] Create Room Panel: {(createRoomPanel != null ? "✓" : "✗ NULL")}");
             Debug.Log($"[RoomUI] Room Browser Panel: {(roomBrowserPanel != null ? "✓" : "✗ NULL")}");
             Debug.Log($"[RoomUI] Lobby Panel: {(lobbyPanel != null ? "✓" : "✗ NULL")}");
+            
+            // RUNTIME FIX: Create prefabs if they're missing
+            if (roomListItemPrefab == null)
+            {
+                Debug.LogWarning("[RoomUI] ⚠ roomListItemPrefab is NULL! Creating runtime prefab...");
+                roomListItemPrefab = CreateRoomListItemPrefab();
+                Debug.Log("[RoomUI] ✓ Runtime room list item prefab created");
+            }
+            
+            if (playerListItemPrefab == null)
+            {
+                Debug.LogWarning("[RoomUI] ⚠ playerListItemPrefab is NULL! Creating runtime prefab...");
+                playerListItemPrefab = CreatePlayerListItemPrefab();
+                Debug.Log("[RoomUI] ✓ Runtime player list item prefab created");
+            }
             
             // Setup button listeners - Main Menu
             if (mainMenuCreateButton != null)
@@ -141,6 +157,7 @@ namespace MultiplayerGame.UI
                 NetworkManager.Instance.OnRoomCreated += OnRoomCreated;
                 NetworkManager.Instance.OnRoomJoined += OnRoomJoined;
                 NetworkManager.Instance.OnRoomLeft += OnRoomLeft;
+                NetworkManager.Instance.OnGameStarted += OnGameStartedFromNetwork;
                 NetworkManager.Instance.OnError += OnNetworkError;
                 Debug.Log("[RoomUI] ✓ Subscribed to NetworkManager events");
             }
@@ -163,6 +180,7 @@ namespace MultiplayerGame.UI
                 NetworkManager.Instance.OnRoomCreated -= OnRoomCreated;
                 NetworkManager.Instance.OnRoomJoined -= OnRoomJoined;
                 NetworkManager.Instance.OnRoomLeft -= OnRoomLeft;
+                NetworkManager.Instance.OnGameStarted -= OnGameStartedFromNetwork;
                 NetworkManager.Instance.OnError -= OnNetworkError;
             }
         }
@@ -232,9 +250,9 @@ namespace MultiplayerGame.UI
 
         private void OnStartGame()
         {
-            Debug.Log("[RoomUI] Starting game - loading scene asynchronously");
-            // Load game scene asynchronously to prevent WebSocket disconnection
-            StartCoroutine(LoadGameSceneAsync());
+            Debug.Log("[RoomUI] Requesting Game Start...");
+            // Send start game request to server - we will load scene when we receive the START_GAME event
+            NetworkManager.Instance?.StartGame();
         }
 
         private System.Collections.IEnumerator LoadGameSceneAsync()
@@ -263,7 +281,13 @@ namespace MultiplayerGame.UI
 
         private void OnRoomListUpdated(List<Room> rooms)
         {
+            Debug.Log($"[RoomUI] ========== OnRoomListUpdated called ==========");
+            Debug.Log($"[RoomUI] Received {rooms?.Count ?? 0} rooms");
+            Debug.Log($"[RoomUI] Room List Container: {(roomListContainer != null ? "✓" : "✗ NULL")}");
+            Debug.Log($"[RoomUI] Room List Item Prefab: {(roomListItemPrefab != null ? "✓" : "✗ NULL")}");
+            
             // Clear existing list
+            Debug.Log($"[RoomUI] Clearing {roomListItems.Count} existing room items");
             foreach (var item in roomListItems)
             {
                 Destroy(item);
@@ -271,33 +295,99 @@ namespace MultiplayerGame.UI
             roomListItems.Clear();
 
             // Create new list items
+            if (rooms == null || rooms.Count == 0)
+            {
+                Debug.LogWarning("[RoomUI] ⚠ No rooms to display!");
+                if (noRoomsText != null)
+                {
+                    noRoomsText.gameObject.SetActive(true);
+                    noRoomsText.text = "No rooms available.\\nClick 'Create Room' to start a new game!";
+                    Debug.Log("[RoomUI] Showing 'no rooms' message");
+                }
+                ShowPanel(roomBrowserPanel);
+                return;
+            }
+            
+            // Hide "no rooms" message when we have rooms
+            if (noRoomsText != null)
+            {
+                noRoomsText.gameObject.SetActive(false);
+            }
+            
+            // Ensure container has layout component
+            if (roomListContainer != null)
+            {
+                var layout = roomListContainer.GetComponent<VerticalLayoutGroup>();
+                if (layout == null)
+                {
+                    Debug.LogWarning("[RoomUI] Adding VerticalLayoutGroup to room list container");
+                    layout = roomListContainer.gameObject.AddComponent<VerticalLayoutGroup>();
+                    layout.spacing = 10;
+                    layout.childAlignment = TextAnchor.UpperCenter;
+                    layout.childControlWidth = true;
+                    layout.childControlHeight = false;
+                    layout.childForceExpandWidth = true;
+                    layout.childForceExpandHeight = false;
+                    layout.padding = new RectOffset(10, 10, 10, 10);
+                }
+                
+                Debug.Log($"[RoomUI] Container active: {roomListContainer.gameObject.activeInHierarchy}");
+            }
+            
+            int itemsCreated = 0;
             foreach (var room in rooms)
             {
+                Debug.Log($"[RoomUI] Processing room: {room.name} (ID: {room.room_id}, Players: {room.current_players.Count}/{room.max_players})");
+                
                 if (roomListItemPrefab != null && roomListContainer != null)
                 {
                     GameObject item = Instantiate(roomListItemPrefab, roomListContainer);
+                    item.SetActive(true); // CRITICAL: Ensure item is active!
+                    Debug.Log($"[RoomUI] ✓ Created room list item for '{room.name}' (Active: {item.activeInHierarchy})");
                     
                     // Setup room item
                     var nameText = item.transform.Find("RoomName")?.GetComponent<TextMeshProUGUI>();
                     if (nameText != null)
+                    {
                         nameText.text = room.name;
+                        Debug.Log($"[RoomUI]   - Set room name: {room.name}");
+                    }
+                    else
+                        Debug.LogWarning("[RoomUI]   - ✗ RoomName text component not found!");
 
                     var playerCountText = item.transform.Find("PlayerCount")?.GetComponent<TextMeshProUGUI>();
                     if (playerCountText != null)
+                    {
                         playerCountText.text = $"{room.current_players.Count}/{room.max_players}";
+                        Debug.Log($"[RoomUI]   - Set player count: {room.current_players.Count}/{room.max_players}");
+                    }
+                    else
+                        Debug.LogWarning("[RoomUI]   - ✗ PlayerCount text component not found!");
 
                     var joinButton = item.transform.Find("JoinButton")?.GetComponent<Button>();
                     if (joinButton != null)
                     {
                         string roomId = room.room_id;
                         joinButton.onClick.AddListener(() => OnJoinRoom(roomId, room.is_private));
+                        Debug.Log($"[RoomUI]   - ✓ Join button configured");
                     }
+                    else
+                        Debug.LogWarning("[RoomUI]   - ✗ JoinButton component not found!");
 
                     roomListItems.Add(item);
+                    itemsCreated++;
+                }
+                else
+                {
+                    Debug.LogError($"[RoomUI] ✗ Cannot create room item - Prefab: {(roomListItemPrefab != null ? "OK" : "NULL")}, Container: {(roomListContainer != null ? "OK" : "NULL")}");
                 }
             }
 
+            Debug.Log($"[RoomUI] ✓ Created {itemsCreated} room list items");
+            Debug.Log($"[RoomUI] Total items in list: {roomListItems.Count}");
+            Debug.Log($"[RoomUI] Showing room browser panel");
             ShowPanel(roomBrowserPanel);
+            Debug.Log($"[RoomUI] ========== OnRoomListUpdated complete ==========");
         }
 
         private void OnJoinRoom(string roomId, bool isPrivate)
@@ -327,6 +417,12 @@ namespace MultiplayerGame.UI
         private void OnRoomLeft()
         {
             ShowPanel(mainMenuPanel);
+        }
+
+        private void OnGameStartedFromNetwork()
+        {
+            Debug.Log("[RoomUI] Received Game Start signal from Network.");
+            StartCoroutine(LoadGameSceneAsync());
         }
 
         private void OnNetworkError(string error)
@@ -420,6 +516,117 @@ namespace MultiplayerGame.UI
             createRoomPanel?.SetActive(panel == createRoomPanel);
             roomBrowserPanel?.SetActive(panel == roomBrowserPanel);
             lobbyPanel?.SetActive(panel == lobbyPanel);
+            
+            // Ensure room list container is visible when showing room browser
+            if (panel == roomBrowserPanel && roomListContainer != null)
+            {
+                roomListContainer.gameObject.SetActive(true);
+                Debug.Log($"[RoomUI] Room browser panel shown, container active: {roomListContainer.gameObject.activeInHierarchy}");
+            }
+            
+            Debug.Log($"[RoomUI] Panel visibility - Main: {mainMenuPanel?.activeSelf}, Browser: {roomBrowserPanel?.activeSelf}, Create: {createRoomPanel?.activeSelf}, Lobby: {lobbyPanel?.activeSelf}");
         }
+
+        #region Runtime Prefab Creation
+
+        /// <summary>
+        /// Creates a room list item prefab at runtime if one wasn't assigned in the Inspector
+        /// </summary>
+        private GameObject CreateRoomListItemPrefab()
+        {
+            GameObject prefab = new GameObject("RoomListItemPrefab");
+            RectTransform rect = prefab.AddComponent<RectTransform>();
+            rect.sizeDelta = new Vector2(700, 80);
+
+            // Background
+            Image bg = prefab.AddComponent<Image>();
+            bg.color = new Color(0.15f, 0.15f, 0.2f);
+
+            // Room Name Text
+            GameObject nameTextObj = new GameObject("RoomName");
+            nameTextObj.transform.SetParent(prefab.transform, false);
+            RectTransform nameRect = nameTextObj.AddComponent<RectTransform>();
+            nameRect.anchorMin = new Vector2(0, 0.5f);
+            nameRect.anchorMax = new Vector2(0, 0.5f);
+            nameRect.anchoredPosition = new Vector2(20, 0);
+            nameRect.sizeDelta = new Vector2(400, 40);
+            
+            TextMeshProUGUI nameText = nameTextObj.AddComponent<TextMeshProUGUI>();
+            nameText.text = "Room Name";
+            nameText.fontSize = 24;
+            nameText.color = Color.white;
+            nameText.alignment = TextAlignmentOptions.Left;
+
+            // Player Count Text
+            GameObject countTextObj = new GameObject("PlayerCount");
+            countTextObj.transform.SetParent(prefab.transform, false);
+            RectTransform countRect = countTextObj.AddComponent<RectTransform>();
+            countRect.anchorMin = new Vector2(0.6f, 0.5f);
+            countRect.anchorMax = new Vector2(0.6f, 0.5f);
+            countRect.anchoredPosition = new Vector2(0, 0);
+            countRect.sizeDelta = new Vector2(100, 30);
+            
+            TextMeshProUGUI countText = countTextObj.AddComponent<TextMeshProUGUI>();
+            countText.text = "0/4";
+            countText.fontSize = 20;
+            countText.color = Color.white;
+            countText.alignment = TextAlignmentOptions.Center;
+
+            // Join Button
+            GameObject joinBtnObj = new GameObject("JoinButton");
+            joinBtnObj.transform.SetParent(prefab.transform, false);
+            RectTransform joinRect = joinBtnObj.AddComponent<RectTransform>();
+            joinRect.anchorMin = new Vector2(1, 0.5f);
+            joinRect.anchorMax = new Vector2(1, 0.5f);
+            joinRect.anchoredPosition = new Vector2(-70, 0);
+            joinRect.sizeDelta = new Vector2(120, 50);
+            
+            Image joinBg = joinBtnObj.AddComponent<Image>();
+            joinBg.color = new Color(0.2f, 0.4f, 0.8f);
+            
+            Button joinButton = joinBtnObj.AddComponent<Button>();
+            ColorBlock colors = joinButton.colors;
+            colors.normalColor = new Color(0.2f, 0.4f, 0.8f);
+            colors.highlightedColor = new Color(0.3f, 0.5f, 0.9f);
+            colors.pressedColor = new Color(0.16f, 0.32f, 0.64f);
+            joinButton.colors = colors;
+            
+            GameObject joinTextObj = new GameObject("Text");
+            joinTextObj.transform.SetParent(joinBtnObj.transform, false);
+            RectTransform joinTextRect = joinTextObj.AddComponent<RectTransform>();
+            joinTextRect.anchorMin = Vector2.zero;
+            joinTextRect.anchorMax = Vector2.one;
+            joinTextRect.sizeDelta = Vector2.zero;
+            
+            TextMeshProUGUI joinText = joinTextObj.AddComponent<TextMeshProUGUI>();
+            joinText.text = "Join";
+            joinText.fontSize = 24;
+            joinText.color = Color.white;
+            joinText.alignment = TextAlignmentOptions.Center;
+
+            prefab.SetActive(false); // Prefabs should be inactive
+            return prefab;
+        }
+
+        /// <summary>
+        /// Creates a player list item prefab at runtime if one wasn't assigned in the Inspector
+        /// </summary>
+        private GameObject CreatePlayerListItemPrefab()
+        {
+            GameObject prefab = new GameObject("PlayerListItemPrefab");
+            RectTransform rect = prefab.AddComponent<RectTransform>();
+            rect.sizeDelta = new Vector2(400, 40);
+
+            TextMeshProUGUI text = prefab.AddComponent<TextMeshProUGUI>();
+            text.text = "Player Name (Role)";
+            text.fontSize = 20;
+            text.color = Color.white;
+            text.alignment = TextAlignmentOptions.Center;
+
+            prefab.SetActive(false); // Prefabs should be inactive
+            return prefab;
+        }
+
+        #endregion
     }
 }
