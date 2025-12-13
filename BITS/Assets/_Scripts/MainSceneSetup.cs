@@ -25,7 +25,7 @@ namespace MultiplayerGame
         
         [Header("Environment Settings")]
         [SerializeField] private Vector2 playAreaSize = new Vector2(40f, 40f);
-        [SerializeField] private Color floorColor = new Color(0.2f, 0.3f, 0.2f);
+        [SerializeField] private Color floorColor = new Color(1.0f, 0.6f, 0.2f);
         [SerializeField] private Color wallColor = new Color(0.4f, 0.4f, 0.4f);
         [SerializeField] private float wallHeight = 5f;
         

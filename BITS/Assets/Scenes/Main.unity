@@ -1584,6 +1584,7 @@ MonoBehaviour:
   refreshButton: {fileID: 0}
   createRoomButton: {fileID: 0}
   backToMenuButton: {fileID: 0}
+  noRoomsText: {fileID: 0}
   roomNameInput: {fileID: 1824118927}
   maxPlayersInput: {fileID: 1674496590}
   privateToggle: {fileID: 1708834398}
@@ -2417,7 +2418,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.1, g: 0.1, b: 0.15, a: 0.95}
+  m_Color: {r: 0.82588655, g: 0.11294055, b: 0.8867924, a: 0.95}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -3809,7 +3810,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.1, g: 0.1, b: 0.15, a: 0.95}
+  m_Color: {r: 0.118948035, g: 0.9339623, b: 0.8851295, a: 0.95}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -4282,6 +4283,7 @@ MonoBehaviour:
   refreshButton: {fileID: 1520537123}
   createRoomButton: {fileID: 0}
   backToMenuButton: {fileID: 850040554}
+  noRoomsText: {fileID: 0}
   roomNameInput: {fileID: 1929337311}
   maxPlayersInput: {fileID: 827901070}
   privateToggle: {fileID: 0}
@@ -4906,7 +4908,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.1, g: 0.1, b: 0.15, a: 0.95}
+  m_Color: {r: 0, g: 1, b: 0.19270587, a: 0.95}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -5143,7 +5145,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.1, g: 0.1, b: 0.15, a: 0.95}
+  m_Color: {r: 0.8867924, g: 0.079476655, b: 0.087724, a: 0.95}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
