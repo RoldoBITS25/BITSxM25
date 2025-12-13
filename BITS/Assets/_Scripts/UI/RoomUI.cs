@@ -16,11 +16,17 @@ namespace MultiplayerGame.UI
         [SerializeField] private GameObject roomBrowserPanel;
         [SerializeField] private GameObject lobbyPanel;
 
+        [Header("Main Menu")]
+        [SerializeField] private Button mainMenuCreateButton;
+        [SerializeField] private Button mainMenuJoinButton;
+        [SerializeField] private TextMeshProUGUI titleText;
+
         [Header("Room Browser")]
         [SerializeField] private Transform roomListContainer;
         [SerializeField] private GameObject roomListItemPrefab;
         [SerializeField] private Button refreshButton;
         [SerializeField] private Button createRoomButton;
+        [SerializeField] private Button backToMenuButton;
 
         [Header("Create Room")]
         [SerializeField] private TMP_InputField roomNameInput;
@@ -44,24 +50,89 @@ namespace MultiplayerGame.UI
 
         private void Start()
         {
-            // Setup button listeners
+            Debug.Log("[RoomUI] ========== RoomUI Initializing ==========");
+            
+            // Debug: Check panel references
+            Debug.Log($"[RoomUI] Main Menu Panel: {(mainMenuPanel != null ? "✓" : "✗ NULL")}");
+            Debug.Log($"[RoomUI] Create Room Panel: {(createRoomPanel != null ? "✓" : "✗ NULL")}");
+            Debug.Log($"[RoomUI] Room Browser Panel: {(roomBrowserPanel != null ? "✓" : "✗ NULL")}");
+            Debug.Log($"[RoomUI] Lobby Panel: {(lobbyPanel != null ? "✓" : "✗ NULL")}");
+            
+            // Setup button listeners - Main Menu
+            if (mainMenuCreateButton != null)
+            {
+                mainMenuCreateButton.onClick.AddListener(OnShowCreateRoom);
+                Debug.Log("[RoomUI] ✓ Main Menu Create Button listener added");
+            }
+            else
+                Debug.LogWarning("[RoomUI] ✗ Main Menu Create Button is NULL!");
+
+            if (mainMenuJoinButton != null)
+            {
+                mainMenuJoinButton.onClick.AddListener(OnShowRoomBrowser);
+                Debug.Log("[RoomUI] ✓ Main Menu Join Button listener added");
+            }
+            else
+                Debug.LogWarning("[RoomUI] ✗ Main Menu Join Button is NULL!");
+
+            // Room Browser
             if (refreshButton != null)
+            {
                 refreshButton.onClick.AddListener(OnRefreshRooms);
+                Debug.Log("[RoomUI] ✓ Refresh Button listener added");
+            }
+            else
+                Debug.LogWarning("[RoomUI] ✗ Refresh Button is NULL!");
 
             if (createRoomButton != null)
+            {
                 createRoomButton.onClick.AddListener(OnShowCreateRoom);
+                Debug.Log("[RoomUI] ✓ Create Room Button (browser) listener added");
+            }
+            else
+                Debug.LogWarning("[RoomUI] ✗ Create Room Button (browser) is NULL!");
 
+            if (backToMenuButton != null)
+            {
+                backToMenuButton.onClick.AddListener(OnBackToMainMenu);
+                Debug.Log("[RoomUI] ✓ Back To Menu Button listener added");
+            }
+            else
+                Debug.LogWarning("[RoomUI] ✗ Back To Menu Button is NULL!");
+
+            // Create Room
             if (confirmCreateButton != null)
+            {
                 confirmCreateButton.onClick.AddListener(OnConfirmCreateRoom);
+                Debug.Log("[RoomUI] ✓ Confirm Create Button listener added");
+            }
+            else
+                Debug.LogWarning("[RoomUI] ✗ Confirm Create Button is NULL!");
 
             if (cancelCreateButton != null)
+            {
                 cancelCreateButton.onClick.AddListener(OnCancelCreateRoom);
+                Debug.Log("[RoomUI] ✓ Cancel Create Button listener added");
+            }
+            else
+                Debug.LogWarning("[RoomUI] ✗ Cancel Create Button is NULL!");
 
+            // Lobby
             if (startGameButton != null)
+            {
                 startGameButton.onClick.AddListener(OnStartGame);
+                Debug.Log("[RoomUI] ✓ Start Game Button listener added");
+            }
+            else
+                Debug.LogWarning("[RoomUI] ✗ Start Game Button is NULL!");
 
             if (leaveLobbyButton != null)
+            {
                 leaveLobbyButton.onClick.AddListener(OnLeaveLobby);
+                Debug.Log("[RoomUI] ✓ Leave Lobby Button listener added");
+            }
+            else
+                Debug.LogWarning("[RoomUI] ✗ Leave Lobby Button is NULL!");
 
             // Subscribe to network events
             if (NetworkManager.Instance != null)
@@ -71,10 +142,17 @@ namespace MultiplayerGame.UI
                 NetworkManager.Instance.OnRoomJoined += OnRoomJoined;
                 NetworkManager.Instance.OnRoomLeft += OnRoomLeft;
                 NetworkManager.Instance.OnError += OnNetworkError;
+                Debug.Log("[RoomUI] ✓ Subscribed to NetworkManager events");
+            }
+            else
+            {
+                Debug.LogError("[RoomUI] ✗ NetworkManager.Instance is NULL! Network events won't work.");
             }
 
             // Show main menu
+            Debug.Log("[RoomUI] Showing main menu panel");
             ShowPanel(mainMenuPanel);
+            Debug.Log("[RoomUI] ========== RoomUI Initialization Complete ==========");
         }
 
         private void OnDestroy()
@@ -91,46 +169,87 @@ namespace MultiplayerGame.UI
 
         #region Button Handlers
 
+        private void OnShowRoomBrowser()
+        {
+            Debug.Log("[RoomUI] OnShowRoomBrowser called");
+            ShowPanel(roomBrowserPanel);
+            // Auto-refresh room list when showing browser
+            OnRefreshRooms();
+        }
+
+        private void OnBackToMainMenu()
+        {
+            Debug.Log("[RoomUI] OnBackToMainMenu called");
+            ShowPanel(mainMenuPanel);
+        }
+
         private void OnRefreshRooms()
         {
+            Debug.Log("[RoomUI] OnRefreshRooms called");
             NetworkManager.Instance?.GetRoomList(false);
         }
 
         private void OnShowCreateRoom()
         {
+            Debug.Log("[RoomUI] OnShowCreateRoom called");
             ShowPanel(createRoomPanel);
         }
 
         private void OnConfirmCreateRoom()
         {
+            Debug.Log("[RoomUI] OnConfirmCreateRoom called");
+            
+            if (roomNameInput == null)
+            {
+                Debug.LogError("[RoomUI] roomNameInput is NULL!");
+                return;
+            }
+            
             string roomName = roomNameInput.text;
             if (string.IsNullOrEmpty(roomName))
             {
-                Debug.LogWarning("Room name cannot be empty");
+                Debug.LogWarning("[RoomUI] Room name cannot be empty");
                 return;
             }
 
             int maxPlayers = 4;
-            if (!string.IsNullOrEmpty(maxPlayersInput.text))
+            if (maxPlayersInput != null && !string.IsNullOrEmpty(maxPlayersInput.text))
             {
                 int.TryParse(maxPlayersInput.text, out maxPlayers);
             }
 
-            bool isPrivate = privateToggle.isOn;
-            string password = isPrivate ? passwordInput.text : null;
+            bool isPrivate = privateToggle != null && privateToggle.isOn;
+            string password = isPrivate && passwordInput != null ? passwordInput.text : null;
 
+            Debug.Log($"[RoomUI] Creating room: {roomName}, MaxPlayers: {maxPlayers}, Private: {isPrivate}");
             NetworkManager.Instance?.CreateRoom(roomName, maxPlayers, isPrivate, password);
         }
 
         private void OnCancelCreateRoom()
         {
-            ShowPanel(roomBrowserPanel);
+            ShowPanel(mainMenuPanel);
         }
 
         private void OnStartGame()
         {
-            // Load game scene
-            UnityEngine.SceneManagement.SceneManager.LoadScene("GameScene");
+            Debug.Log("[RoomUI] Starting game - loading scene asynchronously");
+            // Load game scene asynchronously to prevent WebSocket disconnection
+            StartCoroutine(LoadGameSceneAsync());
+        }
+
+        private System.Collections.IEnumerator LoadGameSceneAsync()
+        {
+            Debug.Log("[RoomUI] Loading GameScene...");
+            var asyncLoad = UnityEngine.SceneManagement.SceneManager.LoadSceneAsync("GameScene");
+            
+            // Wait until the scene is fully loaded
+            while (!asyncLoad.isDone)
+            {
+                Debug.Log($"[RoomUI] Loading progress: {asyncLoad.progress * 100}%");
+                yield return null;
+            }
+            
+            Debug.Log("[RoomUI] GameScene loaded successfully");
         }
 
         private void OnLeaveLobby()
@@ -207,8 +326,7 @@ namespace MultiplayerGame.UI
 
         private void OnRoomLeft()
         {
-            ShowPanel(roomBrowserPanel);
-            OnRefreshRooms();
+            ShowPanel(mainMenuPanel);
         }
 
         private void OnNetworkError(string error)
