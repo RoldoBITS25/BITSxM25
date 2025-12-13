@@ -7,7 +7,7 @@ namespace MultiplayerGame
     /// Controls player movement
     /// Handles movement input and sends position updates to the network
     /// </summary>
-    [RequireComponent(typeof(Rigidbody2D))]
+    [RequireComponent(typeof(Rigidbody))]
     public class PlayerController : MonoBehaviour
     {
         [Header("Movement")]
@@ -15,8 +15,8 @@ namespace MultiplayerGame
 
         private string playerId;
         private bool isLocalPlayer;
-        private Rigidbody2D rb;
-        private Vector2 moveInput;
+        private Rigidbody rb;
+        private Vector3 moveInput;
 
         // Input Actions
         private PlayerInput playerInput;
@@ -37,14 +37,21 @@ namespace MultiplayerGame
 
         private void Awake()
         {
-            rb = GetComponent<Rigidbody2D>();
+            rb = GetComponent<Rigidbody>();
             rb.freezeRotation = true;
 
             // Get Input System component
             playerInput = GetComponent<PlayerInput>();
-            if (playerInput != null)
+            if (playerInput != null && playerInput.actions != null)
             {
-                moveAction = playerInput.actions["Move"];
+                try
+                {
+                    moveAction = playerInput.actions["Move"];
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogWarning($"[PlayerController] Move action not found: {ex.Message}. Using fallback input.");
+                }
             }
         }
 
@@ -54,10 +61,34 @@ namespace MultiplayerGame
                 return;
 
             // Read movement input
+            Vector2 input = Vector2.zero;
+            
+            // Try reading from configured action
             if (moveAction != null)
             {
-                moveInput = moveAction.ReadValue<Vector2>();
+                input = moveAction.ReadValue<Vector2>();
             }
+            
+            // Fallback to direct keyboard polling if no input detected or action missing
+            if (input == Vector2.zero)
+            {
+                var keyboard = Keyboard.current;
+                if (keyboard != null)
+                {
+                    if (keyboard.wKey.isPressed || keyboard.upArrowKey.isPressed) input.y += 1;
+                    if (keyboard.sKey.isPressed || keyboard.downArrowKey.isPressed) input.y -= 1;
+                    if (keyboard.aKey.isPressed || keyboard.leftArrowKey.isPressed) input.x -= 1;
+                    if (keyboard.dKey.isPressed || keyboard.rightArrowKey.isPressed) input.x += 1;
+                }
+            }
+
+            if (input != Vector2.zero)
+            {
+                Debug.Log($"[PlayerController] Input detected: {input}");
+            }
+
+            // Map 2D input (x,y) to 3D movement (x,0,z)
+            moveInput = new Vector3(input.x, 0f, input.y);
 
             // Send position updates periodically
             if (Time.frameCount % 10 == 0) // Every 10 frames
@@ -71,11 +102,11 @@ namespace MultiplayerGame
             if (!isLocalPlayer)
                 return;
 
-            // Handle 2D movement
+            // Handle 3D movement
             if (moveInput.sqrMagnitude > 0.01f)
             {
-                // Move in 2D space (X, Y plane)
-                Vector2 movement = moveInput.normalized * moveSpeed * Time.fixedDeltaTime;
+                // Move in 3D space (X, Z plane)
+                Vector3 movement = moveInput.normalized * moveSpeed * Time.fixedDeltaTime;
                 rb.MovePosition(rb.position + movement);
             }
         }

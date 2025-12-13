@@ -27,13 +27,41 @@ namespace MultiplayerGame
 
         private void Awake()
         {
+            Debug.Log("[GameStateManager] ========== GameStateManager Initializing ==========");
+            
             if (Instance == null)
             {
                 Instance = this;
+                Debug.Log("[GameStateManager] ✓ Initialized as singleton");
             }
             else
             {
+                Debug.LogWarning("[GameStateManager] Duplicate instance detected, destroying");
                 Destroy(gameObject);
+                return;
+            }
+            
+            // Ensure we have a player prefab
+            if (playerPrefab == null)
+            {
+                Debug.LogWarning("[GameStateManager] No player prefab assigned, creating default prefab");
+                CreateDefaultPlayerPrefab();
+            }
+            else
+            {
+                Debug.Log($"[GameStateManager] ✓ Player prefab assigned: {playerPrefab.name}");
+            }
+            
+            // Ensure spawn points exist
+            EnsureSpawnPointsExist();
+            
+            Debug.Log("[GameStateManager] ========== GameStateManager Ready ==========");
+
+            // Check if we are already in a room (e.g., scene loaded after joining)
+            if (NetworkManager.Instance != null && NetworkManager.Instance.CurrentRoom != null)
+            {
+                Debug.Log("[GameStateManager] Already in room, triggering join logic manually");
+                OnRoomJoined(NetworkManager.Instance.CurrentRoom);
             }
         }
 
@@ -62,11 +90,13 @@ namespace MultiplayerGame
             }
 
             // Spawn other players
-            foreach (string playerId in room.current_players)
+            for (int i = 0; i < room.current_players.Count; i++)
             {
+                string playerId = room.current_players[i];
+                // Player numbers are 1-based (index + 1)
                 if (playerId != NetworkManager.Instance.PlayerId && !spawnedPlayers.ContainsKey(playerId))
                 {
-                    SpawnRemotePlayer(playerId);
+                    SpawnRemotePlayer(playerId, i + 1);
                 }
             }
         }
@@ -101,42 +131,81 @@ namespace MultiplayerGame
 
         private void SpawnLocalPlayer()
         {
+            if (localPlayerObject != null) return;
+
+            Debug.Log($"[GameStateManager] ========== Spawning Local Player ==========");
+            Debug.Log($"[GameStateManager] Player ID: {NetworkManager.Instance.PlayerId}");
+            Debug.Log($"[GameStateManager] Player Number: {NetworkManager.Instance.PlayerNumber}");
+            
             if (playerPrefab == null)
             {
-                Debug.LogError("Player prefab not assigned!");
+                Debug.LogError("[GameStateManager] ✗ Player prefab not assigned! Cannot spawn player.");
+                Debug.LogError("[GameStateManager] This should have been created in Awake(). Check for errors above.");
                 return;
             }
 
             Transform spawnPoint = NetworkManager.Instance.PlayerNumber == 1 ? player1SpawnPoint : player2SpawnPoint;
             Vector3 spawnPosition = spawnPoint != null ? spawnPoint.position : Vector3.zero;
+            
+            Debug.Log($"[GameStateManager] Spawn point: {(spawnPoint != null ? spawnPoint.name : "null (using Vector3.zero)")}");
+            Debug.Log($"[GameStateManager] Spawn position: {spawnPosition}");
 
             localPlayerObject = Instantiate(playerPrefab, spawnPosition, Quaternion.identity);
             localPlayerObject.name = $"LocalPlayer_{NetworkManager.Instance.PlayerId}";
+            localPlayerObject.SetActive(true); // Ensure it's active!
+            
+            Debug.Log($"[GameStateManager] ✓ Player object instantiated: {localPlayerObject.name}");
 
             // Enable player controller
             var controller = localPlayerObject.GetComponent<PlayerController>();
             if (controller != null)
             {
                 controller.Initialize(NetworkManager.Instance.PlayerId, true);
+                Debug.Log($"[GameStateManager] ✓ PlayerController initialized");
+            }
+            else
+            {
+                Debug.LogWarning($"[GameStateManager] No PlayerController found on player prefab");
             }
 
             // Set player color based on player number
             SetPlayerColor(localPlayerObject, NetworkManager.Instance.PlayerNumber);
+            
+            // Set up camera follow
+            var camera = Camera.main;
+            if (camera != null)
+            {
+                var topDownCamera = camera.GetComponent<TopDownCamera>();
+                if (topDownCamera != null)
+                {
+                    topDownCamera.SetFollowTarget(localPlayerObject.transform);
+                    Debug.Log($"[GameStateManager] ✓ Camera follow target set to local player");
+                }
+                else
+                {
+                    Debug.LogWarning("[GameStateManager] TopDownCamera component not found on Main Camera");
+                    // Try to add it if missing? No, user might have their own setup. Just warn.
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[GameStateManager] Main Camera not found for follow target setup");
+            }
+            
+            Debug.Log($"[GameStateManager] ========== Local Player Spawned Successfully ==========");
         }
 
-        private void SpawnRemotePlayer(string playerId)
+        private void SpawnRemotePlayer(string playerId, int playerNumber)
         {
             if (playerPrefab == null || spawnedPlayers.ContainsKey(playerId))
                 return;
 
-            // Determine spawn position based on player index
-            int playerIndex = 0;
-            // This would need to be determined from room data
-            Transform spawnPoint = playerIndex == 0 ? player1SpawnPoint : player2SpawnPoint;
+            Transform spawnPoint = playerNumber == 1 ? player1SpawnPoint : player2SpawnPoint;
             Vector3 spawnPosition = spawnPoint != null ? spawnPoint.position : Vector3.zero;
 
             GameObject remotePlayer = Instantiate(playerPrefab, spawnPosition, Quaternion.identity);
             remotePlayer.name = $"RemotePlayer_{playerId}";
+            remotePlayer.SetActive(true); // Ensure it's active!
 
             // Disable local control for remote players
             var controller = remotePlayer.GetComponent<PlayerController>();
@@ -145,7 +214,15 @@ namespace MultiplayerGame
                 controller.Initialize(playerId, false);
             }
 
+            // Add RemotePlayerController for smoothing
+            var remoteController = remotePlayer.AddComponent<RemotePlayerController>();
+            remoteController.Initialize(playerId);
+
+            // Set color for remote player
+            SetPlayerColor(remotePlayer, playerNumber);
+
             spawnedPlayers[playerId] = remotePlayer;
+            Debug.Log($"[GameStateManager] Spawned remote player: {playerId} (Player {playerNumber})");
         }
 
         private void SpawnSpectatorCamera()
@@ -166,7 +243,8 @@ namespace MultiplayerGame
             var renderer = player.GetComponentInChildren<Renderer>();
             if (renderer != null)
             {
-                Color color = playerNumber == 1 ? Color.blue : Color.red;
+                // Player 1 = Red, Player 2 = Green
+                Color color = playerNumber == 1 ? Color.red : Color.green;
                 renderer.material.color = color;
             }
         }
@@ -180,7 +258,7 @@ namespace MultiplayerGame
             switch (action.action_type)
             {
                 case "move":
-                    UpdatePlayerPosition(action.player_id, action.position);
+                    UpdatePlayerPosition(action.player_id, action.position, action.rotation);
                     break;
 
                 case "grab":
@@ -197,11 +275,46 @@ namespace MultiplayerGame
             }
         }
 
-        private void UpdatePlayerPosition(string playerId, Vector3 position)
+        private void UpdatePlayerPosition(string playerId, Vector3 position, Quaternion? rotation = null)
         {
             if (spawnedPlayers.TryGetValue(playerId, out GameObject player))
             {
-                player.transform.position = position;
+                // Use RemotePlayerController for smoothing if available
+                var remoteController = player.GetComponent<RemotePlayerController>();
+                if (remoteController != null)
+                {
+                    if (rotation.HasValue)
+                        remoteController.SetTarget(position, rotation.Value);
+                    else
+                        remoteController.SetTarget(position);
+                }
+                else
+                {
+                    // Fallback to direct teleport
+                    player.transform.position = position;
+                    if (rotation.HasValue)
+                        player.transform.rotation = rotation.Value;
+                }
+            }
+            else
+            {
+                // Lazy spawn if we don't know this player
+                Debug.Log($"[GameStateManager] Received action for unknown player {playerId}, spawning now.");
+                SpawnRemotePlayer(playerId, 3); // Default to player 3 (spectator/other) color
+                
+                // Try applying update immediately after spawn
+                if (spawnedPlayers.TryGetValue(playerId, out GameObject newPlayer))
+                {
+                    newPlayer.transform.position = position;
+                    if (rotation.HasValue)
+                        newPlayer.transform.rotation = rotation.Value;
+                        
+                    var rc = newPlayer.GetComponent<RemotePlayerController>();
+                    if (rc != null) 
+                    {
+                        rc.Initialize(playerId); // Re-init to capture new pos
+                    }
+                }
             }
         }
 
@@ -276,6 +389,122 @@ namespace MultiplayerGame
         public void UnregisterObject(string objectId)
         {
             spawnedObjects.Remove(objectId);
+        }
+
+        /// <summary>
+        /// Creates a default player prefab if none is assigned
+        /// This ensures players can spawn even without a manually created prefab
+        /// </summary>
+        private void CreateDefaultPlayerPrefab()
+        {
+            Debug.Log("[GameStateManager] Creating default player prefab...");
+            
+            // Create a simple empty object
+            GameObject prefab = new GameObject("DefaultPlayerPrefab");
+            
+            // Add Rigidbody for 3D physics
+            Rigidbody rb = prefab.AddComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.freezeRotation = true;
+                rb.useGravity = false; // Top-down game, no gravity by default or handled by ground check
+                rb.linearDamping = 5f; // Smooth movement
+                
+                // Constraints: freeze Y position to keep on ground plane (optional, but good for top-down)
+                // rb.constraints = RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezeRotation;
+                // Currently just freezing rotation as per previous logic, but gravity is off
+            }
+            else
+            {
+                Debug.LogError("[GameStateManager] Critical Error: Could not add Rigidbody!");
+            }
+            
+            // Add SphereCollider for 3D collision
+            SphereCollider collider = prefab.AddComponent<SphereCollider>();
+            if (collider != null)
+                collider.radius = 0.5f;
+            
+            // Add a visual representation (Sphere for "Ball" look)
+            GameObject visual = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            visual.name = "Visual";
+            visual.transform.SetParent(prefab.transform);
+            visual.transform.localPosition = Vector3.zero;
+            visual.transform.localScale = Vector3.one; // 1x1x1 sphere
+            
+            // Remove the 3D collider from the visual child as we have one on the root
+            if (visual.GetComponent<Collider>())
+                Destroy(visual.GetComponent<Collider>());
+            
+            // Add PlayerController
+            prefab.AddComponent<PlayerController>();
+            
+            // Add PlayerInput component for Input System
+            prefab.AddComponent<UnityEngine.InputSystem.PlayerInput>();
+            
+            // Set default material color if material exists
+            Renderer renderer = visual.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                Material mat = new Material(Shader.Find("Unlit/Color")); // Use unlit shader for guaranteed visibility
+                mat.color = Color.white; 
+                renderer.material = mat;
+            }
+            
+            // Don't activate it in the scene, just use as prefab reference
+            prefab.SetActive(false);
+            
+            playerPrefab = prefab;
+            
+            Debug.Log("[GameStateManager] ✓ Default player prefab created (Sphere 3D)");
+        }
+        
+        /// <summary>
+        /// Ensures spawn points exist in the scene
+        /// Creates them if they don't exist
+        /// </summary>
+        private void EnsureSpawnPointsExist()
+        {
+            Debug.Log("[GameStateManager] Checking spawn points...");
+            
+            // Find or create spawn points parent
+            GameObject spawnPointsParent = GameObject.Find("SpawnPoints");
+            if (spawnPointsParent == null)
+            {
+                spawnPointsParent = new GameObject("SpawnPoints");
+                Debug.Log("[GameStateManager] Created SpawnPoints parent object");
+            }
+            
+            // Player 1 spawn point
+            if (player1SpawnPoint == null)
+            {
+                GameObject player1Spawn = GameObject.Find("Player1SpawnPoint");
+                if (player1Spawn == null)
+                {
+                    player1Spawn = new GameObject("Player1SpawnPoint");
+                    player1Spawn.transform.SetParent(spawnPointsParent.transform);
+                    player1Spawn.transform.position = new Vector3(-10f, 0.5f, 0f);
+                    Debug.Log("[GameStateManager] Created Player1SpawnPoint at (-10, 0.5, 0)");
+                }
+                player1SpawnPoint = player1Spawn.transform;
+            }
+            
+            Debug.Log($"[GameStateManager] ✓ Player 1 spawn point: {player1SpawnPoint.position}");
+            
+            // Player 2 spawn point
+            if (player2SpawnPoint == null)
+            {
+                GameObject player2Spawn = GameObject.Find("Player2SpawnPoint");
+                if (player2Spawn == null)
+                {
+                    player2Spawn = new GameObject("Player2SpawnPoint");
+                    player2Spawn.transform.SetParent(spawnPointsParent.transform);
+                    player2Spawn.transform.position = new Vector3(10f, 0.5f, 0f);
+                    Debug.Log("[GameStateManager] Created Player2SpawnPoint at (10, 0.5, 0)");
+                }
+                player2SpawnPoint = player2Spawn.transform;
+            }
+            
+            Debug.Log($"[GameStateManager] ✓ Player 2 spawn point: {player2SpawnPoint.position}");
         }
 
         private void OnDestroy()
