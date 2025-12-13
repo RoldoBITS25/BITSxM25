@@ -679,11 +679,11 @@ PlayerSettings:
   captureStartupLogs: {}
   activeInputHandler: 1
   windowsGamepadBackendHint: 0
-  cloudProjectId: 9dd84fb8-d2dd-43a0-bdc2-81d9fbe27b72
+  cloudProjectId: 32fae7ca-b96f-4783-a9f1-e78112b62cda
   framebufferDepthMemorylessMode: 0
   qualitySettingsNames: []
   projectName: BITS
-  organizationId: hatty342
+  organizationId: tlluciasenserrich
   cloudEnabled: 0
   legacyClampBlendShapeWeights: 0
   hmiLoadingImage: {fileID: 0}
