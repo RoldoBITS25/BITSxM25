@@ -7,7 +7,7 @@ namespace MultiplayerGame
     /// Simple player controller for testing without network
     /// Just attach this to a GameObject and use WASD to move!
     /// </summary>
-    [RequireComponent(typeof(Rigidbody))]
+    [RequireComponent(typeof(Rigidbody2D))]
     public class SimplePlayerController : MonoBehaviour
     {
         [Header("Movement Settings")]
@@ -18,13 +18,13 @@ namespace MultiplayerGame
         [SerializeField] private float interactionRange = 2f;
         [SerializeField] private LayerMask interactableLayer = -1;
 
-        private Rigidbody rb;
+        private Rigidbody2D rb;
         private GameObject targetObject;
         private GameObject heldObject;
 
         private void Awake()
         {
-            rb = GetComponent<Rigidbody>();
+            rb = GetComponent<Rigidbody2D>();
             rb.freezeRotation = true;
         }
 
@@ -53,16 +53,16 @@ namespace MultiplayerGame
 
             if (moveInput.sqrMagnitude > 0.01f)
             {
-                Vector3 movement = new Vector3(moveInput.x, 0, moveInput.y).normalized;
+                Vector2 movement = new Vector2(moveInput.x, moveInput.y).normalized;
                 
                 // Move
                 rb.MovePosition(rb.position + movement * moveSpeed * Time.fixedDeltaTime);
 
                 // Rotate towards movement direction
-                if (movement != Vector3.zero)
+                if (movement != Vector2.zero)
                 {
                     Quaternion targetRotation = Quaternion.LookRotation(movement);
-                    rb.rotation = Quaternion.RotateTowards(rb.rotation, targetRotation, rotationSpeed * Time.fixedDeltaTime);
+                    //rb.rotation = Quaternion.RotateTowards(rb.rotation, targetRotation, rotationSpeed * Time.fixedDeltaTime);
                 }
             }
         }
