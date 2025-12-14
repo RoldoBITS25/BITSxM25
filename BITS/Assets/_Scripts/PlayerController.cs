@@ -125,31 +125,41 @@ namespace MultiplayerGame
 
         private WeaponType GetNextWeapon()
         {
-            switch (CurrentWeapon)
+            // Define the circular weapon order
+            WeaponType[] weaponOrder = { WeaponType.Paper, WeaponType.Scissors, WeaponType.Rock };
+            
+            // Find current weapon index
+            int currentIndex = -1;
+            for (int i = 0; i < weaponOrder.Length; i++)
             {
-                case WeaponType.None:
-                    return WeaponType.Paper;
-                case WeaponType.Paper:
-                    return WeaponType.Scissors;
-                case WeaponType.Scissors:
-                    return WeaponType.Rock;
-                case WeaponType.Rock:
-                    return WeaponType.Paper;
-                default:
-                    return WeaponType.Paper;
+                if (weaponOrder[i] == CurrentWeapon)
+                {
+                    currentIndex = i;
+                    break;
+                }
             }
+            
+            // Start from next weapon and cycle through all options
+            for (int i = 1; i <= weaponOrder.Length; i++)
+            {
+                int nextIndex = (currentIndex + i) % weaponOrder.Length;
+                WeaponType candidateWeapon = weaponOrder[nextIndex];
+                
+                // Check if this weapon is available (not taken by another player)
+                if (GameStateManager.Instance == null || !GameStateManager.Instance.IsWeaponTaken(candidateWeapon))
+                {
+                    return candidateWeapon;
+                }
+            }
+            
+            // Fallback: if all weapons are taken (shouldn't happen), return current weapon
+            Debug.LogWarning("[PlayerController] All weapons are taken! Keeping current weapon.");
+            return CurrentWeapon;
         }
 
         private void AttemptSwapWeapon(WeaponType newWeapon)
         {
             if (CurrentWeapon == newWeapon) return;
-
-            // Check if weapon is already taken by another player
-            if (GameStateManager.Instance != null && GameStateManager.Instance.IsWeaponTaken(newWeapon))
-            {
-                Debug.LogWarning($"[PlayerController] Cannot swap to {newWeapon} - taken by another player!");
-                return;
-            }
             
             // Optimistically update
             CurrentWeapon = newWeapon;
