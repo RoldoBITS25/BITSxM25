@@ -727,7 +727,9 @@ namespace MultiplayerGame
                                 // Provide default/empty values if null
                                 position = detailedMsg.data.action_data?.position?.ToVector3() ?? Vector3.zero,
                                 rotation = detailedMsg.data.action_data?.rotation?.ToQuaternion() ?? Quaternion.identity,
-                                target_object_id = detailedMsg.data.action_data?.target_object_id
+                                // rotation = detailedMsg.data.action_data?.rotation?.ToQuaternion() ?? Quaternion.identity,
+                                target_object_id = detailedMsg.data.action_data?.target_object_id,
+                                weapon = detailedMsg.data.action_data?.weapon
                             };
                             
                             OnPlayerActionReceived?.Invoke(action);
@@ -803,11 +805,17 @@ namespace MultiplayerGame
         /// <summary>
         /// Send a player action to the server
         /// </summary>
-        public void SendPlayerAction(string actionType, string targetObjectId = null, Vector3? position = null, Quaternion? rotation = null, Dictionary<string, object> extraData = null)
+        public void SendPlayerAction(string actionType, string targetObjectId = null, Vector3? position = null, Quaternion? rotation = null, Dictionary<string, object> extraData = null, string weapon = null)
         {
-            if (!IsPlayer || !isConnected)
+            if (!isConnected)
             {
-                Debug.LogWarning($"[NetworkManager] Cannot send action: IsPlayer={IsPlayer}, isConnected={isConnected}");
+                Debug.LogWarning($"[NetworkManager] Cannot send action: isConnected={isConnected}");
+                return;
+            }
+            
+            if (webSocket == null)
+            {
+                Debug.LogWarning($"[NetworkManager] Cannot send action: WebSocket is null");
                 return;
             }
 
@@ -827,6 +835,11 @@ namespace MultiplayerGame
             {
                 payload.target_object_id = targetObjectId;
             }
+
+            if (!string.IsNullOrEmpty(weapon))
+            {
+                payload.weapon = weapon;
+            }
             
             // Note: extraData is ignored here because JsonUtility doesn't support dictionaries
             // If we need extra data, we should add fields to WSPlayerActionPayload
@@ -844,7 +857,7 @@ namespace MultiplayerGame
 
             string json = JsonUtility.ToJson(message);
             Debug.Log($"[NetworkManager] Sending {actionType} action");
-            // Debug.Log($"[NetworkManager] Action JSON: {json}"); // noisy
+            Debug.Log($"[NetworkManager] Action JSON: {json}");
             webSocket?.Send(json);
         }
 
@@ -858,6 +871,7 @@ namespace MultiplayerGame
 
         public void SendMoveAction(Vector3 position)
         {
+            Debug.Log($"[NetworkManager] SendMoveAction called with position: {position}");
             SendMoveAction(position, Quaternion.identity);
         }
 
@@ -883,6 +897,25 @@ namespace MultiplayerGame
         public void SendBreakAction(string objectId)
         {
             SendPlayerAction("break", objectId);
+        }
+
+        /// <summary>
+        /// Send swap weapon action
+        ///Wrapper for generic SendPlayerAction
+        /// </summary>
+        public void SendSwapWeaponAction(string weaponType)
+        {
+            // Create a payload with just the weapon info, handled via extraData logic 
+            // or we need to overload SendPlayerAction or modify it to accept weapon.
+            // Actually, I'll modify SendPlayerAction to take an optional weapon param or just construct it here if I modify the payload logic.
+            
+            // Wait, SendPlayerAction (lines 806) creates WSPlayerActionPayload. 
+            // I should update SendPlayerAction to accept weapon or allow setting it.
+            // Let's overload SendPlayerAction or just call generic one and modify it.
+            
+            // To avoid changing signature of SendPlayerAction everywhere, I'll update it to check extraData for 'weapon' 
+            // OR simpler: just update SendPlayerAction signature with default null.
+            SendPlayerAction("swap_weapon", null, null, null, null, weaponType);
         }
 
         #endregion
@@ -1010,6 +1043,7 @@ namespace MultiplayerGame
         public Vector3 position;
         public Quaternion rotation;
         public string timestamp;
+        public string weapon;
     }
 
     [Serializable]
@@ -1046,6 +1080,7 @@ namespace MultiplayerGame
         public PacketVector3 position;
         public PacketVector3 rotation;
         public string target_object_id;
+        public string weapon;
     }
 
     [Serializable]
@@ -1143,6 +1178,7 @@ namespace MultiplayerGame
         public PacketVector3 rotation;
         public string target_object_id;
         public bool is_running; // from requirements example
+        public string weapon;
     }
 
     #endregion
