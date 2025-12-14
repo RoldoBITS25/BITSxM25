@@ -50,6 +50,7 @@ namespace MultiplayerGame
             {
                 GameStateManager.Instance.RegisterObject(objectId, gameObject);
             }
+            this.OnInteract("player1");
         }
         
         /// <summary>
@@ -154,6 +155,33 @@ namespace MultiplayerGame
                 inputTextComponent.Clear();
             }
             HideInputPopup();
+            // Locate EnigmaManager and check the answer
+            EnigmaManager enigmaManager = FindObjectOfType<EnigmaManager>();
+            if (enigmaManager != null)
+            {
+                bool isCorrect = enigmaManager.CheckAnswer(text); // Assuming CheckAnswer returns a boolean
+                
+                TextDisplayObject textDisplay = FindObjectOfType<TextDisplayObject>();
+                if (textDisplay != null)
+                {
+                    if (isCorrect)
+                    {
+                        textDisplay.DisplayText("CORRECT", Color.green); // Assuming TextDisplayObject has a DisplayText method
+                    }
+                    else
+                    {
+                        textDisplay.DisplayText("INCORRECT", Color.red); // Assuming TextDisplayObject has a DisplayText method
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning("[InputTextObject] TextDisplayObject not found in the scene.");
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[InputTextObject] EnigmaManager not found in the scene.");
+            }
             
             // You can send this to the network if needed
             // NetworkManager.Instance?.SendCustomAction(objectId, "text_input", text);
