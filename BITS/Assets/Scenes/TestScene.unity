@@ -1378,6 +1378,9 @@ MonoBehaviour:
   canBeCut: 1
   highlightColor: {r: 0.99621856, g: 1, b: 0, a: 1}
   cutEffectPrefab: {fileID: 0}
+  isSplittable: 0
+  separationForce: 5
+  rotationTorque: 3
 --- !u!21 &1747280719
 Material:
   serializedVersion: 8

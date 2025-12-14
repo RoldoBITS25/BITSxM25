@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &1570709585401183314
+--- !u!1 &1914414735261651910
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,39 +8,39 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 2060466022513832852}
-  - component: {fileID: 5576159357821000463}
-  - component: {fileID: 2616719620711743080}
+  - component: {fileID: 1087828737142979704}
+  - component: {fileID: 2138993126053302266}
+  - component: {fileID: 380935804199553653}
   m_Layer: 0
-  m_Name: BreakableObject
+  m_Name: CuttableObject
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &2060466022513832852
+--- !u!4 &1087828737142979704
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1570709585401183314}
+  m_GameObject: {fileID: 1914414735261651910}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: -13.1, y: 0.06, z: 0.12}
-  m_LocalScale: {x: 3.1496, y: 3.1496, z: 3.1496}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 11.07, y: 0.76, z: -0.41226}
+  m_LocalScale: {x: 3.14, y: 3.14, z: 3.14}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 3066515836286482906}
+  - {fileID: 6473595443881342188}
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 90, y: 0, z: 0}
---- !u!65 &5576159357821000463
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!65 &2138993126053302266
 BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1570709585401183314}
+  m_GameObject: {fileID: 1914414735261651910}
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
@@ -55,25 +55,25 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &2616719620711743080
+--- !u!114 &380935804199553653
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1570709585401183314}
+  m_GameObject: {fileID: 1914414735261651910}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c216f5a74947a0146b0d6c1ef6cab2ba, type: 3}
+  m_Script: {fileID: 11500000, guid: 22f5fa016b5cf5e42a4d5bec1bf1e38d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::MultiplayerGame.BreakableObject
-  canBeBroken: 1
-  highlightColor: {r: 1, g: 0, b: 0, a: 1}
-  dropPrefab: {fileID: 0}
-  dropCount: 1
-  dropForce: 2
-  dropSpread: 0.5
---- !u!1 &7416792426272635717
+  m_EditorClassIdentifier: Assembly-CSharp::MultiplayerGame.CuttableObject
+  canBeCut: 1
+  highlightColor: {r: 0, g: 1, b: 1, a: 1}
+  cutEffectPrefab: {fileID: 0}
+  isSplittable: 0
+  separationForce: 5
+  rotationTorque: 3
+--- !u!1 &2276243623996087443
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -81,8 +81,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 3066515836286482906}
-  - component: {fileID: 7276356450678494186}
+  - component: {fileID: 6473595443881342188}
+  - component: {fileID: 6746875043598144632}
   m_Layer: 0
   m_Name: Square
   m_TagString: Untagged
@@ -90,28 +90,28 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &3066515836286482906
+--- !u!4 &6473595443881342188
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7416792426272635717}
+  m_GameObject: {fileID: 2276243623996087443}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 2060466022513832852}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!212 &7276356450678494186
+  m_Father: {fileID: 1087828737142979704}
+  m_LocalEulerAnglesHint: {x: 90, y: 0, z: 0}
+--- !u!212 &6746875043598144632
 SpriteRenderer:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7416792426272635717}
+  m_GameObject: {fileID: 2276243623996087443}
   m_Enabled: 1
   m_CastShadows: 0
   m_ReceiveShadows: 0
@@ -153,7 +153,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_Sprite: {fileID: 7482667652216324306, guid: 311925a002f4447b3a28927169b83ea6, type: 3}
-  m_Color: {r: 1, g: 0, b: 0, a: 1}
+  m_Color: {r: 0, g: 0.6268916, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
