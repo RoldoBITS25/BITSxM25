@@ -41,24 +41,17 @@ namespace MultiplayerGame
 
         private void Awake()
         {
-            // Get Input System component
-            playerInput = GetComponent<PlayerInput>();
-            if (playerInput != null)
-            {
-                interactAction = playerInput.actions["Interact"];
-            }
+      
         }
 
         private void OnEnable()
         {
-            if (interactAction != null)
-                interactAction.performed += OnInteractPerformed;
+           
         }
 
         private void OnDisable()
         {
-            if (interactAction != null)
-                interactAction.performed -= OnInteractPerformed;
+           
         }
 
         private void Update()
@@ -66,126 +59,32 @@ namespace MultiplayerGame
             if (!isLocalPlayer)
                 return;
 
-            // Check for nearby interactable objects
-            CheckForInteractables();
+            if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
+            {
+                Debug.Log("Interacting");
+                CheckForInteractables();
+            }
+
         }
+
 
         private void CheckForInteractables()
         {
-            // Use 2D physics for overlap detection
-            Collider2D[] colliders = Physics2D.OverlapCircleAll(transform.position, interactionRange, interactableLayer);
+            // Get the nearest game object within interaction range
+            GameObject nearestObject = GetNearestGameObject(interactionRange);
             
-            IGrabbable closestGrabbable = null;
-            ICuttable closestCuttable = null;
-            IBreakable closestBreakable = null;
-            float closestDistance = float.MaxValue;
-
-            foreach (var collider in colliders)
-            {
-                float distance = Vector2.Distance(transform.position, collider.transform.position);
-                
-                // Check for grabbable objects
-                var grabbable = collider.GetComponent<IGrabbable>();
-                if (grabbable != null && grabbable != heldObject && distance < closestDistance)
-                {
-                    closestGrabbable = grabbable;
-                    closestDistance = distance;
-                }
-                
-                // Check for cuttable objects
-                var cuttable = collider.GetComponent<ICuttable>();
-                if (cuttable != null && distance < closestDistance)
-                {
-                    closestCuttable = cuttable;
-                }
-                
-                // Check for breakable objects
-                var breakable = collider.GetComponent<IBreakable>();
-                if (breakable != null && distance < closestDistance)
-                {
-                    closestBreakable = breakable;
-                }
-            }
-
-            // Update grabbable target highlight
-            if (targetGrabbable != closestGrabbable)
-            {
-                if (targetGrabbable is GrabbableObject oldGrab)
-                    oldGrab.SetHighlight(false);
-                
-                targetGrabbable = closestGrabbable;
-                
-                if (targetGrabbable is GrabbableObject newGrab)
-                    newGrab.SetHighlight(true);
-            }
+            if (nearestObject == null)
+                return;
             
-            // Update cuttable target highlight
-            if (targetCuttable != closestCuttable)
+            // Check if the nearest object is interactable
+            var interactable = nearestObject.GetComponent<IInteractable>();
+            if (interactable != null)
             {
-                if (targetCuttable is CuttableObject oldCut)
-                    oldCut.SetHighlight(false);
-                
-                targetCuttable = closestCuttable;
-                
-                if (targetCuttable is CuttableObject newCut)
-                    newCut.SetHighlight(true);
-            }
-            
-            // Update breakable target highlight
-            if (targetBreakable != closestBreakable)
-            {
-                if (targetBreakable is BreakableObject oldBreak)
-                    oldBreak.SetHighlight(false);
-                
-                targetBreakable = closestBreakable;
-                
-                if (targetBreakable is BreakableObject newBreak)
-                    newBreak.SetHighlight(true);
+                Debug.Log($"Interacting with {nearestObject.name}");
+                interactable.Interact();
             }
         }
 
-        private void OnInteractPerformed(InputAction.CallbackContext context)
-        {
-            // Priority 1: Release held object if holding something
-            if (heldObject != null)
-            {
-                ReleaseObject();
-                return;
-            }
-
-            // Priority 2: Grab object if available
-            if (targetGrabbable != null && targetGrabbable.CanBeGrabbed())
-            {
-                GrabObject(targetGrabbable);
-                return;
-            }
-
-            // Priority 3: Cut object if available
-            if (targetCuttable != null && targetCuttable.CanBeCut())
-            {
-                Vector2 cutPosition = targetCuttable.GetTransform().position;
-                targetCuttable.OnCut(cutPosition);
-                
-                // Send cut action to network (if needed)
-                // NetworkManager.Instance?.SendCutAction(objectId, cutPosition);
-                
-                targetCuttable = null;
-                return;
-            }
-
-            // Priority 4: Break object if available
-            if (targetBreakable != null && targetBreakable.CanBeBroken())
-            {
-                string objectId = targetBreakable.GetObjectId();
-                targetBreakable.OnBreak();
-                
-                // Send break action to network (if needed)
-                NetworkManager.Instance?.SendBreakAction(objectId);
-                
-                targetBreakable = null;
-                return;
-            }
-        }
 
         private void GrabObject(IGrabbable obj)
         {
@@ -218,12 +117,31 @@ namespace MultiplayerGame
                 heldObject = null;
             }
         }
-
-        private void OnDrawGizmosSelected()
+        
+        public GameObject GetNearestGameObject(float range)
         {
-            // Draw interaction range
-            Gizmos.color = Color.yellow;
-            Gizmos.DrawWireSphere(transform.position, interactionRange);
+            // Get all colliders within range (no layer filtering)
+            Collider[] colliders = Physics.OverlapSphere(transform.position, range);
+            
+            GameObject nearestObject = null;
+            float nearestDistance = float.MaxValue;
+            
+            foreach (var collider in colliders)
+            {
+                // Skip self
+                if (collider.gameObject == gameObject)
+                    continue;
+                
+                float distance = Vector2.Distance(transform.position, collider.transform.position);
+                
+                if (distance < nearestDistance)
+                {
+                    nearestDistance = distance;
+                    nearestObject = collider.gameObject;
+                }
+            }
+            
+            return nearestObject;
         }
     }
 }

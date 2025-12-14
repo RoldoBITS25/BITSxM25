@@ -115,9 +115,9 @@ namespace MultiplayerGame.UI
                     System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                 
                 if (serverUrlField != null)
-                    serverUrlField.SetValue(netManager, "http://127.0.0.1:8000");
+                    serverUrlField.SetValue(netManager, "http://10.166.9.144:8000");
                 if (wsUrlField != null)
-                    wsUrlField.SetValue(netManager, "ws://127.0.0.1:8000");
+                    wsUrlField.SetValue(netManager, "ws://10.166.9.144:8000");
                     
                 Debug.Log("[MenuUISetup] ✓ NetworkManager created");
             }
