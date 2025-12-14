@@ -25,6 +25,12 @@ namespace MultiplayerGame
         private void Awake()
         {
             rb = GetComponent<Rigidbody>();
+            if (rb == null)
+            {
+                Debug.LogError("SimplePlayerController requires a Rigidbody component! Please add one to the Player GameObject.");
+                enabled = false; // Disable this script to prevent further errors
+                return;
+            }
             rb.freezeRotation = true;
         }
 
