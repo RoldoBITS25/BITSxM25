@@ -195,15 +195,38 @@ namespace MultiplayerGame
             Debug.Log($"[GameStateManager] ========== Local Player Spawned Successfully ==========");
         }
 
-        private void SpawnRemotePlayer(string playerId, int playerNumber)
+        public void SpawnRemotePlayer(string playerId, int playerNumber)
         {
-            if (playerPrefab == null || spawnedPlayers.ContainsKey(playerId))
-                return;
-
+            // Delegate to the transform-based spawn, using spawn point if available
             Transform spawnPoint = playerNumber == 1 ? player1SpawnPoint : player2SpawnPoint;
             Vector3 spawnPosition = spawnPoint != null ? spawnPoint.position : Vector3.zero;
+            Quaternion spawnRotation = Quaternion.identity;
 
-            GameObject remotePlayer = Instantiate(playerPrefab, spawnPosition, Quaternion.identity);
+            SpawnRemotePlayer(playerId, spawnPosition, spawnRotation, playerNumber);
+        }
+
+        public void SpawnRemotePlayer(string playerId, Vector3 position, Quaternion rotation)
+        {
+            // Default player number 0 or logic to determine it
+            // Ideally we'd know the player number to set the color correctly
+            // For now, we'll default to 0 (spectator/neutral) or try to find a free slot visually if needed
+            // But let's just use 3 for "other" as used elsewhere
+            SpawnRemotePlayer(playerId, position, rotation, 3);
+        }
+
+        private void SpawnRemotePlayer(string playerId, Vector3 position, Quaternion rotation, int playerNumber)
+        {
+            if (playerPrefab == null) return;
+            
+            // acts as "SpawnOrUpdate" essentially if we check existence
+            if (spawnedPlayers.TryGetValue(playerId, out GameObject existingPlayer))
+            {
+                // Update existing
+                UpdatePlayerPosition(playerId, position, rotation);
+                return;
+            }
+
+            GameObject remotePlayer = Instantiate(playerPrefab, position, rotation);
             remotePlayer.name = $"RemotePlayer_{playerId}";
             remotePlayer.SetActive(true); // Ensure it's active!
 
@@ -222,7 +245,7 @@ namespace MultiplayerGame
             SetPlayerColor(remotePlayer, playerNumber);
 
             spawnedPlayers[playerId] = remotePlayer;
-            Debug.Log($"[GameStateManager] Spawned remote player: {playerId} (Player {playerNumber})");
+            Debug.Log($"[GameStateManager] Spawned remote player: {playerId} (Player {playerNumber}) at {position}");
         }
 
         private void SpawnSpectatorCamera()

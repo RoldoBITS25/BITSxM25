@@ -131,7 +131,7 @@ namespace MultiplayerGame
             if (roomInfoText != null)
             {
                 roomInfoText.text = $"<b>Room:</b> {room.name}\n" +
-                                   $"<b>Room ID:</b> {room.room_id}\n" +
+                                   $"<b>Room ID:</b> {room.join_code}\n" +
                                    $"<b>Players:</b> {room.current_players.Count}/{room.max_players}";
             }
         }

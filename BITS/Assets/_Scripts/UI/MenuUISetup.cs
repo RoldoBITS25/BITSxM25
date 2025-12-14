@@ -173,56 +173,31 @@ namespace MultiplayerGame.UI
         private void CreateRoomBrowserContent(Transform parent)
         {
             // Title
-            GameObject title = CreateText(parent, "BrowserTitle", "Available Rooms", 40, TextAlignmentOptions.Center);
+            GameObject title = CreateText(parent, "BrowserTitle", "Join Room by Code", 40, TextAlignmentOptions.Center);
             RectTransform titleRect = title.GetComponent<RectTransform>();
-            titleRect.anchorMin = new Vector2(0.5f, 0.9f);
-            titleRect.anchorMax = new Vector2(0.5f, 0.9f);
+            titleRect.anchorMin = new Vector2(0.5f, 0.8f);
+            titleRect.anchorMax = new Vector2(0.5f, 0.8f);
             titleRect.sizeDelta = new Vector2(600, 60);
 
-            // Room List Container (ScrollView would be better, but simplified here)
-            GameObject listContainer = new GameObject("RoomListContainer");
-            listContainer.transform.SetParent(parent, false);
-            RectTransform listRect = listContainer.AddComponent<RectTransform>();
-            listRect.anchorMin = new Vector2(0.1f, 0.2f);
-            listRect.anchorMax = new Vector2(0.9f, 0.8f);
-            listRect.sizeDelta = Vector2.zero;
-            
-            // Add VerticalLayoutGroup for automatic layout
-            VerticalLayoutGroup layout = listContainer.AddComponent<VerticalLayoutGroup>();
-            layout.spacing = 10;
-            layout.childAlignment = TextAnchor.UpperCenter;
-            layout.childControlWidth = true;
-            layout.childControlHeight = false;
-            layout.childForceExpandWidth = true;
-            layout.childForceExpandHeight = false;
+            // Room Code Input
+            GameObject codeInput = CreateInputField(parent, "RoomCodeInput", "Enter Room Code...", 400, 60);
+            RectTransform codeRect = codeInput.GetComponent<RectTransform>();
+            codeRect.anchorMin = new Vector2(0.5f, 0.5f);
+            codeRect.anchorMax = new Vector2(0.5f, 0.5f);
+            codeRect.anchoredPosition = new Vector2(0, 50);
 
-            // "No Rooms" text
-            GameObject noRoomsText = CreateText(parent, "NoRoomsText", "No rooms available.\nClick 'Create Room' to start a new game!", 24, TextAlignmentOptions.Center);
-            RectTransform noRoomsRect = noRoomsText.GetComponent<RectTransform>();
-            noRoomsRect.anchorMin = new Vector2(0.5f, 0.5f);
-            noRoomsRect.anchorMax = new Vector2(0.5f, 0.5f);
-            noRoomsRect.sizeDelta = new Vector2(600, 100);
-            noRoomsText.SetActive(false); // Hidden by default
-
-            // Create Room Button
-            GameObject createBtn = CreateButton(parent, "CreateRoomButton", "Create Room", 200, 60);
-            RectTransform createRect = createBtn.GetComponent<RectTransform>();
-            createRect.anchorMin = new Vector2(0.5f, 0.1f);
-            createRect.anchorMax = new Vector2(0.5f, 0.1f);
-            createRect.anchoredPosition = new Vector2(0, 0);
-
-            // Refresh Button
-            GameObject refreshBtn = CreateButton(parent, "RefreshButton", "Refresh", 200, 60);
-            RectTransform refreshRect = refreshBtn.GetComponent<RectTransform>();
-            refreshRect.anchorMin = new Vector2(0.25f, 0.1f);
-            refreshRect.anchorMax = new Vector2(0.25f, 0.1f);
-            refreshRect.anchoredPosition = new Vector2(0, 0);
+            // Join Button
+            GameObject joinBtn = CreateButton(parent, "JoinWithCodeButton", "JOIN ROOM", 250, 70);
+            RectTransform joinRect = joinBtn.GetComponent<RectTransform>();
+            joinRect.anchorMin = new Vector2(0.5f, 0.5f);
+            joinRect.anchorMax = new Vector2(0.5f, 0.5f);
+            joinRect.anchoredPosition = new Vector2(0, -50);
 
             // Back Button
             GameObject backBtn = CreateButton(parent, "BackToMenuButton", "Back", 200, 60);
             RectTransform backRect = backBtn.GetComponent<RectTransform>();
-            backRect.anchorMin = new Vector2(0.75f, 0.1f);
-            backRect.anchorMax = new Vector2(0.75f, 0.1f);
+            backRect.anchorMin = new Vector2(0.5f, 0.2f);
+            backRect.anchorMax = new Vector2(0.5f, 0.2f);
             backRect.anchoredPosition = new Vector2(0, 0);
         }
 
@@ -488,17 +463,13 @@ namespace MultiplayerGame.UI
             AssignField(roomUIType, roomUI, "titleText", 
                 canvas.transform.Find("MainMenuPanel/TitleText")?.GetComponent<TextMeshProUGUI>());
 
-            // Room Browser
-            AssignField(roomUIType, roomUI, "roomListContainer", 
-                canvas.transform.Find("RoomBrowserPanel/RoomListContainer"));
-            AssignField(roomUIType, roomUI, "refreshButton", 
-                canvas.transform.Find("RoomBrowserPanel/RefreshButton")?.GetComponent<Button>());
-            AssignField(roomUIType, roomUI, "createRoomButton", 
-                canvas.transform.Find("RoomBrowserPanel/CreateRoomButton")?.GetComponent<Button>());
+            // Room Browser / Join Room
+            AssignField(roomUIType, roomUI, "roomCodeInput", 
+                canvas.transform.Find("RoomBrowserPanel/RoomCodeInput")?.GetComponent<TMP_InputField>());
+            AssignField(roomUIType, roomUI, "joinWithCodeButton", 
+                canvas.transform.Find("RoomBrowserPanel/JoinWithCodeButton")?.GetComponent<Button>());
             AssignField(roomUIType, roomUI, "backToMenuButton", 
                 canvas.transform.Find("RoomBrowserPanel/BackToMenuButton")?.GetComponent<Button>());
-            AssignField(roomUIType, roomUI, "noRoomsText", 
-                canvas.transform.Find("RoomBrowserPanel/NoRoomsText")?.GetComponent<TextMeshProUGUI>());
             
             // Create and assign prefabs
             GameObject roomListItemPrefab = CreateRoomListItemPrefab();

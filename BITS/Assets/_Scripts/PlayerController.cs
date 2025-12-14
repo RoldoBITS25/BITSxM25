@@ -27,12 +27,12 @@ namespace MultiplayerGame
             this.playerId = playerId;
             this.isLocalPlayer = isLocal;
 
-            if (!isLocal)
-            {
-                // Disable input for remote players
-                if (playerInput != null)
-                    playerInput.enabled = false;
-            }
+            // if (!isLocal)
+            // {
+            //     // Disable input for remote players
+            //     if (playerInput != null)
+            //         playerInput.enabled = false;
+            // }
         }
 
         private void Awake()
