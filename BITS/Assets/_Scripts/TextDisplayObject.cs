@@ -7,8 +7,10 @@ namespace MultiplayerGame
 {
     /// <summary>
     /// Component for objects that display parametrized text when interacted with
+    /// Implements IReadable for consistent interaction handling
+    /// Reading interactions are local-only and do not send data to the backend
     /// </summary>
-    public class TextDisplayObject : MonoBehaviour
+    public class TextDisplayObject : MonoBehaviour, IReadable
     {
         [Header("Text Display Settings")]
         [SerializeField] [TextArea(3, 10)] private string displayText = "Hello, World!";
@@ -21,6 +23,8 @@ namespace MultiplayerGame
         [SerializeField] private Color textColor = Color.white;
         [SerializeField] private int fontSize = 24;
 
+        public bool isNote = false;
+        public int bookId = 0;
         private SpriteRenderer spriteRenderer;
         private MeshRenderer meshRenderer;
         private Color originalColor;
@@ -103,6 +107,27 @@ namespace MultiplayerGame
                 // You can add a custom network action here if needed
                 // NetworkManager.Instance.SendCustomAction("text_display", objectId);
             }
+        }
+
+        /// <summary>
+        /// Display text with an optional color
+        /// </summary>
+        public void DisplayText(string text, Color color)
+        {
+            displayText = text;
+            if (textComponent != null)
+            {
+                textComponent.color = color;
+            }
+            ShowText();
+        }
+
+        /// <summary>
+        /// Display text with default color
+        /// </summary>
+        public void DisplayText(string text)
+        {
+            DisplayText(text, textColor);
         }
 
         /// <summary>
