@@ -50,6 +50,7 @@ namespace MultiplayerGame
             {
                 GameStateManager.Instance.RegisterObject(objectId, gameObject);
             }
+            this.OnInteract("player1");
         }
         
         /// <summary>

@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using TMPro;
 
 namespace MultiplayerGame
@@ -67,6 +68,7 @@ namespace MultiplayerGame
             {
                 GameStateManager.Instance.RegisterObject(objectId, gameObject);
             }
+            // this.OnInteract("player1");
         }
 
         /// <summary>
@@ -157,6 +159,9 @@ namespace MultiplayerGame
         /// </summary>
         private void CreateTextDisplayUI()
         {
+            // Ensure EventSystem exists
+            EnsureEventSystem();
+
             // Create Canvas
             textDisplayCanvas = new GameObject("TextDisplayCanvas");
             Canvas canvas = textDisplayCanvas.AddComponent<Canvas>();
@@ -214,10 +219,7 @@ namespace MultiplayerGame
             
             closeButton = buttonObject.AddComponent<Button>();
             closeButton.onClick.AddListener(() => {
-                if (textDisplayCanvas != null)
-                {
-                    textDisplayCanvas.SetActive(false);
-                }
+                HideText();
             });
 
             // Button Text
@@ -241,6 +243,29 @@ namespace MultiplayerGame
             
             // Make it persist across scenes (optional)
             DontDestroyOnLoad(textDisplayCanvas);
+        }
+
+        /// <summary>
+        /// Ensure an EventSystem exists for UI interactions
+        /// </summary>
+        private void EnsureEventSystem()
+        {
+            EventSystem eventSystem = FindFirstObjectByType<EventSystem>();
+            
+            if (eventSystem == null)
+            {
+                GameObject eventSystemObj = new GameObject("EventSystem");
+                eventSystem = eventSystemObj.AddComponent<EventSystem>();
+                
+                #if ENABLE_INPUT_SYSTEM
+                eventSystemObj.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+                #else
+                eventSystemObj.AddComponent<StandaloneInputModule>();
+                #endif
+                
+                DontDestroyOnLoad(eventSystemObj);
+                Debug.Log("[TextDisplayObject] Created EventSystem for UI interactions");
+            }
         }
 
         public string GetObjectId()
