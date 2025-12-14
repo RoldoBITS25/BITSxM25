@@ -87,6 +87,14 @@ namespace MultiplayerGame
             // Weapon Swap Input - Space key cycles through weapons
             if (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
             {
+                // Check if holding an object - prevent weapon swap
+                var interactionController = GetComponent<InteractionController>();
+                if (interactionController != null && interactionController.IsHoldingObject)
+                {
+                    Debug.Log("[PlayerController] Cannot swap weapons while holding an object! Press E to release it first.");
+                    return;
+                }
+                
                 WeaponType nextWeapon = GetNextWeapon();
                 AttemptSwapWeapon(nextWeapon);
             }

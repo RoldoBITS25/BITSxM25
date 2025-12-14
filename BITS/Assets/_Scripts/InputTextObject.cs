@@ -166,11 +166,11 @@ namespace MultiplayerGame
                 {
                     if (isCorrect)
                     {
-                        textDisplay.DisplayText("CORRECT", Color.green); // Assuming TextDisplayObject has a DisplayText method
+                        textDisplay.SetDisplayText("CORRECT");
                     }
                     else
                     {
-                        textDisplay.DisplayText("INCORRECT", Color.red); // Assuming TextDisplayObject has a DisplayText method
+                        textDisplay.SetDisplayText("INCORRECT");
                     }
                 }
                 else
