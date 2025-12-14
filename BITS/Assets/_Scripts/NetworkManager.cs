@@ -16,8 +16,8 @@ namespace MultiplayerGame
         public static NetworkManager Instance { get; private set; }
 
         [Header("Server Configuration")]
-        [SerializeField] private string serverUrl = "https://aims-rangers-theorem-association.trycloudflare.com";
-        [SerializeField] private string wsUrl = "wss://aims-rangers-theorem-association.trycloudflare.com/ws";
+        [SerializeField] private string serverUrl = "http://10.166.9.144:8000";
+        [SerializeField] private string wsUrl = "ws://10.166.9.144:8000/ws";
 
         [Header("Player Info")]
         public string PlayerId { get; private set; }

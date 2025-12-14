@@ -6,7 +6,7 @@ namespace MultiplayerGame
     /// Component for objects that can be broken and drop items
     /// </summary>
     //[RequireComponent(typeof(Collider2D))]
-    public class BreakableObject : MonoBehaviour, IBreakable
+    public class BreakableObject : MonoBehaviour
     {
         [Header("Breakable Settings")]
         [SerializeField] private bool canBeBroken = true;

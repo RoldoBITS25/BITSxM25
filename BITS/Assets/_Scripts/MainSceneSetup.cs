@@ -30,9 +30,9 @@ namespace MultiplayerGame
         [SerializeField] private float wallHeight = 5f;
         
         [Header("Networking Settings")]
-        [SerializeField] private bool useLocalhostInBuild = false;
-        [SerializeField] private string serverUrl = "http://127.0.0.1:8000";
-        [SerializeField] private string wsUrl = "ws://127.0.0.1:8000";
+        [SerializeField] private bool useLocalhostInBuild = true;
+        [SerializeField] private string serverUrl = "http://10.166.9.144:8000";
+        [SerializeField] private string wsUrl = "ws://10.166.9.144:8000";
         
         [Header("Prefab References")]
         [SerializeField] private GameObject playerPrefab;
