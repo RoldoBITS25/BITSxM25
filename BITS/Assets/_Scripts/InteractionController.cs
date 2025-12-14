@@ -25,6 +25,7 @@ namespace MultiplayerGame
         // Input
         private PlayerInput playerInput;
         private InputAction interactAction;
+        private PlayerController playerController;
 
         public void Initialize(string playerId, bool isLocal)
         {
@@ -41,7 +42,7 @@ namespace MultiplayerGame
 
         private void Awake()
         {
-      
+            playerController = GetComponent<PlayerController>();
         }
 
         private void OnEnable()
@@ -70,19 +71,85 @@ namespace MultiplayerGame
 
         private void CheckForInteractables()
         {
-            // Get the nearest game object within interaction range
+             // Get the nearest game object within interaction range
             GameObject nearestObject = GetNearestGameObject(interactionRange);
             
-            if (nearestObject == null)
-                return;
+            // Interaction logic dependent on weapon
+            if (playerController == null) playerController = GetComponent<PlayerController>();
+            if (playerController == null) return;
             
-            // Check if the nearest object is interactable
-            var interactable = nearestObject.GetComponent<IInteractable>();
-            if (interactable != null)
+            var weapon = playerController.CurrentWeapon;
+            
+            // Release if holding something and weapon is Paper
+            if (weapon == WeaponType.Paper && heldObject != null)
             {
-                Debug.Log($"Interacting with {nearestObject.name}");
-                interactable.Interact();
+                 ReleaseObject();
+                 return;
             }
+
+            if (nearestObject == null) return;
+            
+            if (weapon == WeaponType.Paper)
+            {
+                 // Grab
+                 var grabbable = nearestObject.GetComponent<IGrabbable>();
+                 if (grabbable != null) GrabObject(grabbable);
+            }
+            else if (weapon == WeaponType.Scissors)
+            {
+                 // Cut
+                 // Try ICuttable first
+                 var cuttable = nearestObject.GetComponent<ICuttable>();
+                 if (cuttable != null)
+                 {
+                     if (cuttable.CanBeCut())
+                     {
+                         cuttable.OnCut(transform.position);
+                         string id = GetObjectId(nearestObject);
+                         if (id != null) NetworkManager.Instance?.SendCutAction(id, transform.position);
+                     }
+                 }
+                 else 
+                 {
+                     // Fallback to InteractableObject
+                     var io = nearestObject.GetComponent<InteractableObject>();
+                     if (io != null && io.CanBeCut())
+                     {
+                         io.OnCut(transform.position);
+                         NetworkManager.Instance?.SendCutAction(io.ObjectId, transform.position);
+                     }
+                 }
+            }
+            else if (weapon == WeaponType.Rock)
+            {
+                 // Break
+                 var breakable = nearestObject.GetComponent<IBreakable>();
+                 if (breakable != null)
+                 {
+                      breakable.OnBreak(); // Changed to OnBreak
+                      string id = GetObjectId(nearestObject);
+                      if (id != null) NetworkManager.Instance?.SendBreakAction(id);
+                 }
+                 else
+                 {
+                      // Fallback to InteractableObject
+                      var io = nearestObject.GetComponent<InteractableObject>();
+                      if (io != null && io.CanBeBroken())
+                      {
+                          io.OnBreak();
+                          NetworkManager.Instance?.SendBreakAction(io.ObjectId);
+                      }
+                 }
+            }
+        }
+
+        private string GetObjectId(GameObject obj)
+        {
+            var io = obj.GetComponent<InteractableObject>();
+            if (io != null) return io.ObjectId;
+            var bo = obj.GetComponent<BreakableObject>();
+            if (bo != null) return bo.GetObjectId();
+            return null;
         }
 
 
@@ -93,8 +160,9 @@ namespace MultiplayerGame
                 heldObject = obj;
                 obj.OnGrabbed(playerId);
                 
-                // Send grab action to network (if needed)
-                // NetworkManager.Instance?.SendGrabAction(objectId);
+                // Send grab action to network
+                string id = GetObjectId(obj.GetTransform().gameObject);
+                if (id != null) NetworkManager.Instance?.SendGrabAction(id);
                 
                 // Attach object to player
                 Transform objTransform = obj.GetTransform();

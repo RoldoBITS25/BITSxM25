@@ -179,12 +179,21 @@ namespace MultiplayerGame
                 try
                 {
                     var bytes = Encoding.UTF8.GetBytes(message);
+                    Debug.Log($"[WebSocketClient] → Sending {bytes.Length} bytes");
                     await webSocket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, cancellationTokenSource.Token);
+                    Debug.Log($"[WebSocketClient] ✓ Message sent successfully");
                 }
                 catch (Exception e)
                 {
+                    Debug.LogError($"[WebSocketClient] ✗ Send error: {e.Message}");
                     OnError?.Invoke($"Send error: {e.Message}");
                 }
+            }
+            else
+            {
+                string state = webSocket?.State.ToString() ?? "null";
+                Debug.LogWarning($"[WebSocketClient] ✗ Cannot send message - WebSocket state: {state}");
+                Debug.LogWarning($"[WebSocketClient] Message was: {message.Substring(0, Math.Min(100, message.Length))}...");
             }
         }
 

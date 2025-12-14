@@ -1,3 +1,4 @@
+using System; // For Enum parsing
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -176,15 +177,16 @@ namespace MultiplayerGame
             if (camera != null)
             {
                 var topDownCamera = camera.GetComponent<TopDownCamera>();
+                if (topDownCamera == null)
+                {
+                    Debug.LogWarning("[GameStateManager] TopDownCamera component not found on Main Camera, adding it now");
+                    topDownCamera = camera.gameObject.AddComponent<TopDownCamera>();
+                }
+                
                 if (topDownCamera != null)
                 {
                     topDownCamera.SetFollowTarget(localPlayerObject.transform);
                     Debug.Log($"[GameStateManager] ✓ Camera follow target set to local player");
-                }
-                else
-                {
-                    Debug.LogWarning("[GameStateManager] TopDownCamera component not found on Main Camera");
-                    // Try to add it if missing? No, user might have their own setup. Just warn.
                 }
             }
             else
@@ -193,6 +195,13 @@ namespace MultiplayerGame
             }
             
             Debug.Log($"[GameStateManager] ========== Local Player Spawned Successfully ==========");
+            
+            // Verify WebSocket connection is active
+            if (NetworkManager.Instance != null)
+            {
+                Debug.Log($"[GameStateManager] Verifying WebSocket connection for movement replication...");
+                NetworkManager.Instance.VerifyConnection();
+            }
         }
 
         public void SpawnRemotePlayer(string playerId, int playerNumber)
@@ -274,9 +283,14 @@ namespace MultiplayerGame
 
         private void OnPlayerActionReceived(PlayerAction action)
         {
+            Debug.Log($"[GameStateManager] OnPlayerActionReceived: player={action.player_id}, action={action.action_type}, position={action.position}");
+            
             // Handle actions from other players
             if (action.player_id == NetworkManager.Instance.PlayerId)
+            {
+                Debug.Log($"[GameStateManager] Ignoring own action");
                 return; // Ignore our own actions
+            }
 
             switch (action.action_type)
             {
@@ -295,13 +309,58 @@ namespace MultiplayerGame
                 case "break":
                     HandleBreakAction(action.target_object_id);
                     break;
+                    
+                case "swap_weapon":
+                    HandleSwapWeaponAction(action.player_id, action.weapon);
+                    break;
             }
+        }
+
+        private void HandleSwapWeaponAction(string playerId, string weaponStr)
+        {
+            if (string.IsNullOrEmpty(weaponStr)) return;
+            
+            if (Enum.TryParse(weaponStr, true, out WeaponType weapon))
+            {
+                if (spawnedPlayers.TryGetValue(playerId, out GameObject player))
+                {
+                    var controller = player.GetComponent<PlayerController>();
+                    if (controller != null)
+                    {
+                        controller.CurrentWeapon = weapon;
+                        Debug.Log($"[GameStateManager] Updated player {playerId} weapon to {weapon}");
+                        
+                        // TODO: Visual update
+                    }
+                }
+            }
+        }
+
+        public bool IsWeaponTaken(WeaponType weapon)
+        {
+            if (weapon == WeaponType.None) return false;
+
+            foreach (var kvp in spawnedPlayers)
+            {
+                // Skip local player if contained (spawnedPlayers usually contains remotes, but verify)
+                if (kvp.Key == NetworkManager.Instance.PlayerId) continue;
+
+                var pc = kvp.Value.GetComponent<PlayerController>();
+                if (pc != null && pc.CurrentWeapon == weapon)
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         private void UpdatePlayerPosition(string playerId, Vector3 position, Quaternion? rotation = null)
         {
+            Debug.Log($"[GameStateManager] UpdatePlayerPosition: player={playerId}, position={position}, rotation={rotation}");
+            
             if (spawnedPlayers.TryGetValue(playerId, out GameObject player))
             {
+                Debug.Log($"[GameStateManager] Found spawned player {playerId}, updating position");
                 // Use RemotePlayerController for smoothing if available
                 var remoteController = player.GetComponent<RemotePlayerController>();
                 if (remoteController != null)

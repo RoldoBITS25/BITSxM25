@@ -55,10 +55,33 @@ namespace MultiplayerGame
             }
         }
 
+
+
+
+        // Weapon System
+        public WeaponType CurrentWeapon { get; set; } = WeaponType.None;
+
         private void Update()
         {
             if (!isLocalPlayer)
                 return;
+
+            // Weapon Swap Input
+            if (Keyboard.current != null)
+            {
+                if (Keyboard.current.digit1Key.wasPressedThisFrame)
+                {
+                    AttemptSwapWeapon(WeaponType.Paper);
+                }
+                else if (Keyboard.current.digit2Key.wasPressedThisFrame)
+                {
+                    AttemptSwapWeapon(WeaponType.Scissors);
+                }
+                else if (Keyboard.current.digit3Key.wasPressedThisFrame)
+                {
+                    AttemptSwapWeapon(WeaponType.Rock);
+                }
+            }
 
             // Read movement input
             Vector2 input = Vector2.zero;
@@ -93,8 +116,39 @@ namespace MultiplayerGame
             // Send position updates periodically
             if (Time.frameCount % 10 == 0) // Every 10 frames
             {
-                NetworkManager.Instance?.SendMoveAction(transform.position);
+                if (NetworkManager.Instance != null)
+                {
+                    Debug.Log($"[PlayerController] Sending position update: {transform.position}");
+                    NetworkManager.Instance.SendMoveAction(transform.position);
+                }
+                else
+                {
+                    Debug.LogWarning("[PlayerController] NetworkManager.Instance is null, cannot send move action");
+                }
             }
+        }
+
+        private void AttemptSwapWeapon(WeaponType newWeapon)
+        {
+            if (CurrentWeapon == newWeapon) return;
+
+            // Check if weapon is already taken by another player
+            if (GameStateManager.Instance != null && GameStateManager.Instance.IsWeaponTaken(newWeapon))
+            {
+                Debug.LogWarning($"[PlayerController] Cannot swap to {newWeapon} - taken by another player!");
+                return;
+            }
+
+            Debug.Log($"[PlayerController] Swapping to {newWeapon}...");
+            
+            // Optimistically update
+            CurrentWeapon = newWeapon;
+            
+            // Visual feedback (Todo: proper specific visual)
+            Debug.Log($"[PlayerController] Current Weapon: {CurrentWeapon}");
+            
+            // Send to network
+            NetworkManager.Instance?.SendSwapWeaponAction(newWeapon.ToString().ToLower());
         }
 
         private void FixedUpdate()
@@ -107,7 +161,9 @@ namespace MultiplayerGame
             {
                 // Move in 3D space (X, Z plane)
                 Vector3 movement = moveInput.normalized * moveSpeed * Time.fixedDeltaTime;
-                rb.MovePosition(rb.position + movement);
+                Vector3 newPosition = rb.position + movement;
+                Debug.Log($"[PlayerController] FixedUpdate - Moving from {rb.position} to {newPosition}, moveInput: {moveInput}");
+                rb.MovePosition(newPosition);
             }
         }
     }

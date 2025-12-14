@@ -795,6 +795,41 @@ namespace MultiplayerGame
             webSocket?.Send(json);
         }
 
+        /// <summary>
+        /// Verify WebSocket connection state and synchronize isConnected flag
+        /// Call this before sending important messages to ensure connection is active
+        /// </summary>
+        public void VerifyConnection()
+        {
+            Debug.Log($"[NetworkManager] ========== Connection State Verification ==========");
+            Debug.Log($"[NetworkManager] isConnected flag: {isConnected}");
+            Debug.Log($"[NetworkManager] isPlayerRegistered flag: {isPlayerRegistered}");
+            Debug.Log($"[NetworkManager] WebSocket object: {(webSocket != null ? "exists" : "null")}");
+            
+            if (webSocket != null)
+            {
+                // Access the internal WebSocket state through reflection or add a public property
+                // For now, we'll try to send a test message to verify
+                Debug.Log($"[NetworkManager] WebSocket exists, attempting to verify state...");
+                
+                // Check if we can send (the Send method will log if it fails)
+                SendHeartbeat();
+            }
+            else
+            {
+                Debug.LogWarning($"[NetworkManager] WebSocket is null but isConnected={isConnected}");
+                if (isConnected)
+                {
+                    Debug.LogWarning($"[NetworkManager] Fixing connection state mismatch");
+                    isConnected = false;
+                }
+            }
+            
+            Debug.Log($"[NetworkManager] CurrentRoomId: {CurrentRoomId}");
+            Debug.Log($"[NetworkManager] PlayerId: {PlayerId}");
+            Debug.Log($"[NetworkManager] ========================================");
+        }
+
         #endregion
 
         #region Player Actions
@@ -809,13 +844,16 @@ namespace MultiplayerGame
         {
             if (!isConnected)
             {
-                Debug.LogWarning($"[NetworkManager] Cannot send action: isConnected={isConnected}");
+                Debug.LogWarning($"[NetworkManager] Cannot send {actionType} action: isConnected={isConnected}");
+                Debug.LogWarning($"[NetworkManager] WebSocket state: {webSocket?.GetType().Name ?? "null"}");
+                Debug.LogWarning($"[NetworkManager] CurrentRoomId: {CurrentRoomId}");
                 return;
             }
             
             if (webSocket == null)
             {
-                Debug.LogWarning($"[NetworkManager] Cannot send action: WebSocket is null");
+                Debug.LogWarning($"[NetworkManager] Cannot send {actionType} action: WebSocket is null");
+                Debug.LogWarning($"[NetworkManager] isConnected flag is true but WebSocket is null - connection state mismatch!");
                 return;
             }
 
