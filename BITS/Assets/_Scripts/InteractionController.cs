@@ -62,7 +62,7 @@ namespace MultiplayerGame
 
             if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
             {
-                Debug.Log("Interacting");
+//                 Debug.Log("Interacting");
                 CheckForInteractables();
             }
 

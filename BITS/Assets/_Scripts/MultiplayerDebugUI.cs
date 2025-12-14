@@ -147,7 +147,7 @@ namespace MultiplayerGame
 
         private void OnError(string error)
         {
-            Debug.LogError($"Network Error: {error}");
+// //             Debug.LogError($"Network Error: {error}");
         }
 
         private void OnDestroy()
@@ -200,7 +200,7 @@ namespace MultiplayerGame
 
             debugPanel = panel;
             
-            Debug.Log("Debug UI created! Assign text references in Inspector.");
+// //             Debug.Log("Debug UI created! Assign text references in Inspector.");
         }
 
         private GameObject CreateTextElement(string name, Transform parent, Vector2 position, string defaultText)

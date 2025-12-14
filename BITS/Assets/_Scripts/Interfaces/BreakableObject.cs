@@ -15,7 +15,7 @@ public class BreakableObject : MonoBehaviour, IInteractable
         
     }
     public void Interact(){
-        Debug.Log("Interacting with Breakable Object");
+//         Debug.Log("Interacting with Breakable Object");
         Destroy(gameObject);
     }
 }

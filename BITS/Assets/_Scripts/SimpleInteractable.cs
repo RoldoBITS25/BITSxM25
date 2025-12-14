@@ -48,7 +48,7 @@ namespace MultiplayerGame
             {
                 rb.isKinematic = true;
             }
-            Debug.Log($"{name} grabbed!");
+//             Debug.Log($"{name} grabbed!");
         }
 
         public void OnReleased()
@@ -58,12 +58,12 @@ namespace MultiplayerGame
             {
                 rb.isKinematic = false;
             }
-            Debug.Log($"{name} released!");
+//             Debug.Log($"{name} released!");
         }
 
         public void OnCut()
         {
-            Debug.Log($"{name} cut!");
+//             Debug.Log($"{name} cut!");
             
             // Create two smaller pieces
             Vector3 offset = transform.right * 0.5f;
@@ -90,7 +90,7 @@ namespace MultiplayerGame
 
         public void OnBreak()
         {
-            Debug.Log($"{name} broken!");
+//             Debug.Log($"{name} broken!");
             Destroy(gameObject);
         }
 

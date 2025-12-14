@@ -27,7 +27,7 @@ namespace MultiplayerGame.UI
             {
                 Instance = this;
                 DontDestroyOnLoad(gameObject);
-                Debug.Log("[MainMenuManager] Initialized");
+//                 Debug.Log("[MainMenuManager] Initialized");
             }
             else
             {
@@ -57,7 +57,7 @@ namespace MultiplayerGame.UI
             if (menuCanvas != null)
             {
                 menuCanvas.SetActive(true);
-                Debug.Log("[MainMenuManager] Menu canvas shown");
+//                 Debug.Log("[MainMenuManager] Menu canvas shown");
             }
 
             // Disable scene setup if configured
@@ -71,7 +71,7 @@ namespace MultiplayerGame.UI
                 if (autoSetupField != null)
                 {
                     autoSetupField.SetValue(sceneSetup, false);
-                    Debug.Log("[MainMenuManager] Disabled auto scene setup");
+//                     Debug.Log("[MainMenuManager] Disabled auto scene setup");
                 }
             }
         }
@@ -88,7 +88,7 @@ namespace MultiplayerGame.UI
 
         private void OnRoomJoinedOrCreated(Room room)
         {
-            Debug.Log($"[MainMenuManager] Room joined/created: {room.name}");
+//             Debug.Log($"[MainMenuManager] Room joined/created: {room.name}");
             hasJoinedRoom = true;
 
             // Hide menu canvas (lobby panel will still be visible via RoomUI)
@@ -97,14 +97,14 @@ namespace MultiplayerGame.UI
             // Trigger scene setup now that we're in a room
             if (sceneSetup != null && disableSceneSetupUntilRoomJoined)
             {
-                Debug.Log("[MainMenuManager] Triggering scene setup");
+//                 Debug.Log("[MainMenuManager] Triggering scene setup");
                 sceneSetup.SetupScene();
             }
         }
 
         private void OnRoomLeft()
         {
-            Debug.Log("[MainMenuManager] Room left, returning to menu");
+//             Debug.Log("[MainMenuManager] Room left, returning to menu");
             hasJoinedRoom = false;
 
             // Show menu canvas again

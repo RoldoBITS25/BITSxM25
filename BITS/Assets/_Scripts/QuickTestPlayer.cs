@@ -50,7 +50,7 @@ namespace MultiplayerGame
                 renderer.material = mat;
             }
 
-            Debug.Log("✓ Test player created! Use WASD to move, E to grab, C to cut, B to break");
+//             Debug.Log("✓ Test player created! Use WASD to move, E to grab, C to cut, B to break");
         }
 
         [ContextMenu("Delete Test Player")]
@@ -59,7 +59,7 @@ namespace MultiplayerGame
             if (player != null)
             {
                 DestroyImmediate(player);
-                Debug.Log("Test player deleted");
+//                 Debug.Log("Test player deleted");
             }
         }
     }

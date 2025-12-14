@@ -50,7 +50,7 @@ namespace MultiplayerGame
                 }
                 catch (System.Exception ex)
                 {
-                    Debug.LogWarning($"[PlayerController] Move action not found: {ex.Message}. Using fallback input.");
+                    // Silently fall back to keyboard input
                 }
             }
         }
@@ -66,21 +66,11 @@ namespace MultiplayerGame
             if (!isLocalPlayer)
                 return;
 
-            // Weapon Swap Input
-            if (Keyboard.current != null)
+            // Weapon Swap Input - Space key cycles through weapons
+            if (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
             {
-                if (Keyboard.current.digit1Key.wasPressedThisFrame)
-                {
-                    AttemptSwapWeapon(WeaponType.Paper);
-                }
-                else if (Keyboard.current.digit2Key.wasPressedThisFrame)
-                {
-                    AttemptSwapWeapon(WeaponType.Scissors);
-                }
-                else if (Keyboard.current.digit3Key.wasPressedThisFrame)
-                {
-                    AttemptSwapWeapon(WeaponType.Rock);
-                }
+                WeaponType nextWeapon = GetNextWeapon();
+                AttemptSwapWeapon(nextWeapon);
             }
 
             // Read movement input
@@ -105,10 +95,7 @@ namespace MultiplayerGame
                 }
             }
 
-            if (input != Vector2.zero)
-            {
-                Debug.Log($"[PlayerController] Input detected: {input}");
-            }
+
 
             // Map 2D input (x,y) to 3D movement (x,0,z)
             moveInput = new Vector3(input.x, 0f, input.y);
@@ -118,13 +105,26 @@ namespace MultiplayerGame
             {
                 if (NetworkManager.Instance != null)
                 {
-                    Debug.Log($"[PlayerController] Sending position update: {transform.position}");
                     NetworkManager.Instance.SendMoveAction(transform.position);
                 }
-                else
-                {
-                    Debug.LogWarning("[PlayerController] NetworkManager.Instance is null, cannot send move action");
-                }
+            }
+        }
+
+
+        private WeaponType GetNextWeapon()
+        {
+            switch (CurrentWeapon)
+            {
+                case WeaponType.None:
+                    return WeaponType.Paper;
+                case WeaponType.Paper:
+                    return WeaponType.Scissors;
+                case WeaponType.Scissors:
+                    return WeaponType.Rock;
+                case WeaponType.Rock:
+                    return WeaponType.Paper;
+                default:
+                    return WeaponType.Paper;
             }
         }
 
@@ -138,14 +138,18 @@ namespace MultiplayerGame
                 Debug.LogWarning($"[PlayerController] Cannot swap to {newWeapon} - taken by another player!");
                 return;
             }
-
-            Debug.Log($"[PlayerController] Swapping to {newWeapon}...");
             
             // Optimistically update
             CurrentWeapon = newWeapon;
             
-            // Visual feedback (Todo: proper specific visual)
-            Debug.Log($"[PlayerController] Current Weapon: {CurrentWeapon}");
+            // Display current weapon
+            Debug.Log($"[PlayerController] ★ CURRENT PLAYER WEAPON: {CurrentWeapon} ★");
+            
+            // Log all other players' weapons
+            if (GameStateManager.Instance != null)
+            {
+                GameStateManager.Instance.LogAllPlayerWeapons();
+            }
             
             // Send to network
             NetworkManager.Instance?.SendSwapWeaponAction(newWeapon.ToString().ToLower());
@@ -162,7 +166,6 @@ namespace MultiplayerGame
                 // Move in 3D space (X, Z plane)
                 Vector3 movement = moveInput.normalized * moveSpeed * Time.fixedDeltaTime;
                 Vector3 newPosition = rb.position + movement;
-                Debug.Log($"[PlayerController] FixedUpdate - Moving from {rb.position} to {newPosition}, moveInput: {moveInput}");
                 rb.MovePosition(newPosition);
             }
         }

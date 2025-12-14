@@ -105,7 +105,7 @@ namespace MultiplayerGame
                 rb.isKinematic = true;
             }
 
-            Debug.Log($"{objectId} grabbed by {playerId}");
+//             Debug.Log($"{objectId} grabbed by {playerId}");
         }
 
         public void OnReleased()
@@ -119,7 +119,7 @@ namespace MultiplayerGame
                 rb.isKinematic = false;
             }
 
-            Debug.Log($"{objectId} released");
+//             Debug.Log($"{objectId} released");
         }
 
         public void OnCut(Vector3 cutPosition)
@@ -127,7 +127,7 @@ namespace MultiplayerGame
             if (!canBeCut)
                 return;
 
-            Debug.Log($"{objectId} cut at {cutPosition}");
+//             Debug.Log($"{objectId} cut at {cutPosition}");
 
             // Create two halves
             CreateCutPieces(cutPosition);
@@ -141,7 +141,7 @@ namespace MultiplayerGame
             if (!canBeBroken)
                 return;
 
-            Debug.Log($"{objectId} broken");
+//             Debug.Log($"{objectId} broken");
 
             // Spawn break effect
             if (breakEffectPrefab != null)

@@ -35,14 +35,14 @@ namespace MultiplayerGame
         {
             isGrabbed = true;
             currentHolderId = playerId;
-            Debug.Log($"Object {gameObject.name} grabbed by player {playerId}");
+//             Debug.Log($"Object {gameObject.name} grabbed by player {playerId}");
         }
 
         public void OnReleased()
         {
             isGrabbed = false;
             currentHolderId = null;
-            Debug.Log($"Object {gameObject.name} released");
+//             Debug.Log($"Object {gameObject.name} released");
         }
 
         public Transform GetTransform()

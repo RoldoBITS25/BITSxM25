@@ -17,12 +17,12 @@ namespace MultiplayerGame.UI
             // Check if NetworkManager already exists
             if (NetworkManager.Instance != null)
             {
-                Debug.Log("[EnsureNetworkManager] NetworkManager already exists");
+//                 Debug.Log("[EnsureNetworkManager] NetworkManager already exists");
                 return;
             }
 
             // Create NetworkManager
-            Debug.Log("[EnsureNetworkManager] Creating NetworkManager...");
+//             Debug.Log("[EnsureNetworkManager] Creating NetworkManager...");
             GameObject networkManagerObj = new GameObject("NetworkManager");
             NetworkManager netManager = networkManagerObj.AddComponent<NetworkManager>();
 
@@ -38,7 +38,7 @@ namespace MultiplayerGame.UI
             if (wsUrlField != null)
                 wsUrlField.SetValue(netManager, wsUrl);
 
-            Debug.Log($"[EnsureNetworkManager] ✓ NetworkManager created with server: {serverUrl}");
+//             Debug.Log($"[EnsureNetworkManager] ✓ NetworkManager created with server: {serverUrl}");
         }
     }
 }

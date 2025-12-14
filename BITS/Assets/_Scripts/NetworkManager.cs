@@ -52,25 +52,25 @@ namespace MultiplayerGame
 
         private void Awake()
         {
-            Debug.Log("[NetworkManager] ========== NetworkManager Initializing ==========");
+// //             Debug.Log("[NetworkManager] ========== NetworkManager Initializing ==========");
             
             if (Instance == null)
             {
                 Instance = this;
                 DontDestroyOnLoad(gameObject);
                 PlayerId = GeneratePlayerId();
-                Debug.Log($"[NetworkManager] ✓ Initialized as singleton");
-                Debug.Log($"[NetworkManager] Player ID: {PlayerId}");
-                Debug.Log($"[NetworkManager] Server URL: {serverUrl}");
-                Debug.Log($"[NetworkManager] WebSocket URL: {wsUrl}");
+// //                 Debug.Log($"[NetworkManager] ✓ Initialized as singleton");
+// //                 Debug.Log($"[NetworkManager] Player ID: {PlayerId}");
+// //                 Debug.Log($"[NetworkManager] Server URL: {serverUrl}");
+// //                 Debug.Log($"[NetworkManager] WebSocket URL: {wsUrl}");
                 
                 // Connect to WebSocket immediately to register player with backend
-                Debug.Log($"[NetworkManager] Connecting to WebSocket to register player...");
+// //                 Debug.Log($"[NetworkManager] Connecting to WebSocket to register player...");
                 ConnectWebSocketForRegistration();
             }
             else
             {
-                Debug.LogWarning("[NetworkManager] Duplicate instance detected, destroying");
+// //                 Debug.LogWarning("[NetworkManager] Duplicate instance detected, destroying");
                 Destroy(gameObject);
             }
         }
@@ -108,11 +108,11 @@ namespace MultiplayerGame
         public void CreateRoom(string roomName, int maxPlayers = 4, bool isPrivate = false, string password = null, string username = null)
         {
             this.Username = !string.IsNullOrEmpty(username) ? username : PlayerId;
-            Debug.Log($"[NetworkManager] Set local username (CreateRoom) to: {this.Username}");
+// //             Debug.Log($"[NetworkManager] Set local username (CreateRoom) to: {this.Username}");
 
             if (!isPlayerRegistered)
             {
-                Debug.LogError("[NetworkManager] Cannot create room: Player not registered with backend yet. Please wait for WebSocket connection.");
+// //                 Debug.LogError("[NetworkManager] Cannot create room: Player not registered with backend yet. Please wait for WebSocket connection.");
                 OnError?.Invoke("Not connected to server. Please wait...");
                 return;
             }
@@ -122,7 +122,7 @@ namespace MultiplayerGame
 
         private IEnumerator CreateRoomCoroutine(string roomName, int maxPlayers, bool isPrivate, string password)
         {
-            Debug.Log($"[NetworkManager] Creating room: {roomName}, MaxPlayers: {maxPlayers}, Private: {isPrivate}");
+// //             Debug.Log($"[NetworkManager] Creating room: {roomName}, MaxPlayers: {maxPlayers}, Private: {isPrivate}");
             
             var roomData = new RoomCreate
             {
@@ -135,8 +135,8 @@ namespace MultiplayerGame
             string json = JsonUtility.ToJson(roomData);
             string url = $"{serverUrl}/api/rooms/?host_player_id={PlayerId}";
             
-            Debug.Log($"[NetworkManager] POST {url}");
-            Debug.Log($"[NetworkManager] Request body: {json}");
+// //             Debug.Log($"[NetworkManager] POST {url}");
+// //             Debug.Log($"[NetworkManager] Request body: {json}");
 
             using (UnityWebRequest request = new UnityWebRequest(url, "POST"))
             {
@@ -147,18 +147,18 @@ namespace MultiplayerGame
 
                 yield return request.SendWebRequest();
 
-                Debug.Log($"[NetworkManager] Response Code: {request.responseCode}");
-                Debug.Log($"[NetworkManager] Response: {request.downloadHandler.text}");
+// //                 Debug.Log($"[NetworkManager] Response Code: {request.responseCode}");
+// //                 Debug.Log($"[NetworkManager] Response: {request.downloadHandler.text}");
 
                 if (request.result == UnityWebRequest.Result.Success)
                 {
-                    Debug.Log($"[NetworkManager] ✓ Room created successfully!");
+// //                     Debug.Log($"[NetworkManager] ✓ Room created successfully!");
                     Room room = JsonUtility.FromJson<Room>(request.downloadHandler.text);
                     CurrentRoomId = room.room_id;
                     CurrentRoom = room; // Cache room
                     IsPlayer = true;
                     PlayerNumber = 1; // Host is always player 1
-                    Debug.Log($"[NetworkManager] Room ID: {room.room_id}, Player Number: {PlayerNumber}");
+// //                     Debug.Log($"[NetworkManager] Room ID: {room.room_id}, Player Number: {PlayerNumber}");
                     OnRoomCreated?.Invoke(room);
                     
                     // Connect to WebSocket for real-time updates
@@ -170,8 +170,8 @@ namespace MultiplayerGame
                 else
                 {
                     string errorMsg = $"Failed to create room: {request.error} (Code: {request.responseCode})";
-                    Debug.LogError($"[NetworkManager] ✗ {errorMsg}");
-                    Debug.LogError($"[NetworkManager] Response body: {request.downloadHandler.text}");
+// //                     Debug.LogError($"[NetworkManager] ✗ {errorMsg}");
+// //                     Debug.LogError($"[NetworkManager] Response body: {request.downloadHandler.text}");
                     OnError?.Invoke(errorMsg);
                 }
             }
@@ -198,45 +198,45 @@ namespace MultiplayerGame
         private IEnumerator GetRoomListCoroutine(bool includePrivate)
         {
             string url = $"{serverUrl}/api/rooms/?include_private={includePrivate}";
-            Debug.Log($"[NetworkManager] ========== Getting Room List ==========");
-            Debug.Log($"[NetworkManager] GET {url}");
+// //             Debug.Log($"[NetworkManager] ========== Getting Room List ==========");
+// //             Debug.Log($"[NetworkManager] GET {url}");
 
             using (UnityWebRequest request = UnityWebRequest.Get(url))
             {
                 yield return request.SendWebRequest();
 
-                Debug.Log($"[NetworkManager] Response Code: {request.responseCode}");
-                Debug.Log($"[NetworkManager] Response Body: {request.downloadHandler.text}");
+// //                 Debug.Log($"[NetworkManager] Response Code: {request.responseCode}");
+// //                 Debug.Log($"[NetworkManager] Response Body: {request.downloadHandler.text}");
 
                 if (request.result == UnityWebRequest.Result.Success)
                 {
                     string json = request.downloadHandler.text;
-                    Debug.Log($"[NetworkManager] ✓ Room list received successfully");
-                    Debug.Log($"[NetworkManager] Raw JSON: {json}");
+// //                     Debug.Log($"[NetworkManager] ✓ Room list received successfully");
+// //                     Debug.Log($"[NetworkManager] Raw JSON: {json}");
                     
                     // Wrap the array in an object for Unity's JsonUtility
                     string wrappedJson = "{\"rooms\":" + json + "}";
-                    Debug.Log($"[NetworkManager] Wrapped JSON: {wrappedJson}");
+// //                     Debug.Log($"[NetworkManager] Wrapped JSON: {wrappedJson}");
                     
                     RoomList roomList = JsonUtility.FromJson<RoomList>(wrappedJson);
                     
                     if (roomList == null)
                     {
-                        Debug.LogError("[NetworkManager] ✗ Failed to parse room list - roomList is null!");
+// //                         Debug.LogError("[NetworkManager] ✗ Failed to parse room list - roomList is null!");
                         OnRoomListUpdated?.Invoke(new List<Room>());
                     }
                     else if (roomList.rooms == null)
                     {
-                        Debug.LogError("[NetworkManager] ✗ Failed to parse room list - rooms array is null!");
+// //                         Debug.LogError("[NetworkManager] ✗ Failed to parse room list - rooms array is null!");
                         OnRoomListUpdated?.Invoke(new List<Room>());
                     }
                     else
                     {
-                        Debug.Log($"[NetworkManager] ✓ Parsed {roomList.rooms.Count} rooms");
+// //                         Debug.Log($"[NetworkManager] ✓ Parsed {roomList.rooms.Count} rooms");
                         for (int i = 0; i < roomList.rooms.Count; i++)
                         {
                             var room = roomList.rooms[i];
-                            Debug.Log($"[NetworkManager]   Room {i + 1}: '{room.name}' (ID: {room.room_id}, Players: {room.current_players?.Count ?? 0}/{room.max_players})");
+// //                             Debug.Log($"[NetworkManager]   Room {i + 1}: '{room.name}' (ID: {room.room_id}, Players: {room.current_players?.Count ?? 0}/{room.max_players})");
                         }
                         OnRoomListUpdated?.Invoke(roomList.rooms);
                     }
@@ -244,14 +244,14 @@ namespace MultiplayerGame
                 else
                 {
                     string errorMsg = $"Failed to get room list: {request.error} (Code: {request.responseCode})";
-                    Debug.LogError($"[NetworkManager] ✗ {errorMsg}");
-                    Debug.LogError($"[NetworkManager] Response: {request.downloadHandler.text}");
+// //                     Debug.LogError($"[NetworkManager] ✗ {errorMsg}");
+// //                     Debug.LogError($"[NetworkManager] Response: {request.downloadHandler.text}");
                     OnError?.Invoke(errorMsg);
                     // Invoke with empty list so UI knows request completed
                     OnRoomListUpdated?.Invoke(new List<Room>());
                 }
                 
-                Debug.Log($"[NetworkManager] ========== Room List Request Complete ==========");
+// //                 Debug.Log($"[NetworkManager] ========== Room List Request Complete ==========");
             }
         }
 
@@ -264,11 +264,11 @@ namespace MultiplayerGame
         public void JoinRoom(string roomId, string password = null, string username = null)
         {
             this.Username = !string.IsNullOrEmpty(username) ? username : PlayerId;
-            Debug.Log($"[NetworkManager] Set local username to: {this.Username}");
+// //             Debug.Log($"[NetworkManager] Set local username to: {this.Username}");
 
             if (!isPlayerRegistered)
             {
-                Debug.LogError("[NetworkManager] Cannot join room: Player not registered with backend yet. Please wait for WebSocket connection.");
+// //                 Debug.LogError("[NetworkManager] Cannot join room: Player not registered with backend yet. Please wait for WebSocket connection.");
                 OnError?.Invoke("Not connected to server. Please wait...");
                 return;
             }
@@ -280,8 +280,8 @@ namespace MultiplayerGame
         {
             string url = $"{serverUrl}/api/rooms/join";
             
-            Debug.Log($"[NetworkManager] Joining room: {roomId}");
-            Debug.Log($"[NetworkManager] POST {url}");
+// //             Debug.Log($"[NetworkManager] Joining room: {roomId}");
+// //             Debug.Log($"[NetworkManager] POST {url}");
 
             var joinRequest = new RoomJoinRequest
             {
@@ -291,7 +291,7 @@ namespace MultiplayerGame
             };
 
             string json = JsonUtility.ToJson(joinRequest);
-            Debug.Log($"[NetworkManager] Request Body: {json}");
+// //             Debug.Log($"[NetworkManager] Request Body: {json}");
 
             using (UnityWebRequest request = new UnityWebRequest(url, "POST"))
             {
@@ -302,12 +302,12 @@ namespace MultiplayerGame
 
                 yield return request.SendWebRequest();
 
-                Debug.Log($"[NetworkManager] Response Code: {request.responseCode}");
-                Debug.Log($"[NetworkManager] Response: {request.downloadHandler.text}");
+// //                 Debug.Log($"[NetworkManager] Response Code: {request.responseCode}");
+// //                 Debug.Log($"[NetworkManager] Response: {request.downloadHandler.text}");
 
                 if (request.result == UnityWebRequest.Result.Success)
                 {
-                    Debug.Log($"[NetworkManager] ✓ Successfully joined room {roomId}");
+// //                     Debug.Log($"[NetworkManager] ✓ Successfully joined room {roomId}");
                     // Get room details to determine role (connect WS explicitly)
                     yield return GetRoomDetails(roomId, true);
                     
@@ -317,8 +317,8 @@ namespace MultiplayerGame
                 else
                 {
                     string errorMsg = $"Failed to join room: {request.error} (Code: {request.responseCode})";
-                    Debug.LogError($"[NetworkManager] ✗ {errorMsg}");
-                    Debug.LogError($"[NetworkManager] Response: {request.downloadHandler.text}");
+// //                     Debug.LogError($"[NetworkManager] ✗ {errorMsg}");
+// //                     Debug.LogError($"[NetworkManager] Response: {request.downloadHandler.text}");
                     OnError?.Invoke(errorMsg);
                 }
             }
@@ -327,14 +327,14 @@ namespace MultiplayerGame
         private IEnumerator GetRoomDetails(string roomId, bool connectWebSocket = true)
         {
             string url = $"{serverUrl}/api/rooms/{roomId}";
-            Debug.Log($"[NetworkManager] GET {url}");
+// //             Debug.Log($"[NetworkManager] GET {url}");
 
             using (UnityWebRequest request = UnityWebRequest.Get(url))
             {
                 yield return request.SendWebRequest();
 
-                Debug.Log($"[NetworkManager] Response Code: {request.responseCode}");
-                Debug.Log($"[NetworkManager] Response: {request.downloadHandler.text}");
+// //                 Debug.Log($"[NetworkManager] Response Code: {request.responseCode}");
+// //                 Debug.Log($"[NetworkManager] Response: {request.downloadHandler.text}");
 
                 if (request.result == UnityWebRequest.Result.Success)
                 {
@@ -344,19 +344,19 @@ namespace MultiplayerGame
                     
                     // Determine player role (first 2 are players, rest are spectators)
                     int playerIndex = room.current_players.IndexOf(PlayerId);
-                    Debug.Log($"[NetworkManager] Player index in room: {playerIndex} / {room.current_players.Count}");
+// //                     Debug.Log($"[NetworkManager] Player index in room: {playerIndex} / {room.current_players.Count}");
                     
                     if (playerIndex < 2)
                     {
                         IsPlayer = true;
                         PlayerNumber = playerIndex + 1;
-                        Debug.Log($"[NetworkManager] ✓ Assigned as Player {PlayerNumber}");
+// //                         Debug.Log($"[NetworkManager] ✓ Assigned as Player {PlayerNumber}");
                     }
                     else
                     {
                         IsPlayer = false;
                         PlayerNumber = 0;
-                        Debug.Log($"[NetworkManager] ✓ Assigned as Spectator");
+// //                         Debug.Log($"[NetworkManager] ✓ Assigned as Spectator");
                     }
 
                     OnRoomJoined?.Invoke(room);
@@ -370,8 +370,8 @@ namespace MultiplayerGame
                 else
                 {
                     string errorMsg = $"Failed to get room details: {request.error} (Code: {request.responseCode})";
-                    Debug.LogError($"[NetworkManager] ✗ {errorMsg}");
-                    Debug.LogError($"[NetworkManager] Response: {request.downloadHandler.text}");
+// //                     Debug.LogError($"[NetworkManager] ✗ {errorMsg}");
+// //                     Debug.LogError($"[NetworkManager] Response: {request.downloadHandler.text}");
                     OnError?.Invoke(errorMsg);
                 }
             }
@@ -391,23 +391,23 @@ namespace MultiplayerGame
         private IEnumerator LeaveRoomCoroutine()
         {
             string url = $"{serverUrl}/api/rooms/{CurrentRoomId}/leave?player_id={PlayerId}";
-            Debug.Log($"[NetworkManager] Leaving room: {CurrentRoomId}");
-            Debug.Log($"[NetworkManager] POST {url}");
+// //             Debug.Log($"[NetworkManager] Leaving room: {CurrentRoomId}");
+// //             Debug.Log($"[NetworkManager] POST {url}");
 
             using (UnityWebRequest request = new UnityWebRequest(url, "POST"))
             {
                 request.downloadHandler = new DownloadHandlerBuffer();
                 yield return request.SendWebRequest();
 
-                Debug.Log($"[NetworkManager] Response Code: {request.responseCode}");
+// //                 Debug.Log($"[NetworkManager] Response Code: {request.responseCode}");
                 
                 if (request.result == UnityWebRequest.Result.Success)
                 {
-                    Debug.Log($"[NetworkManager] ✓ Left room successfully");
+// //                     Debug.Log($"[NetworkManager] ✓ Left room successfully");
                 }
                 else
                 {
-                    Debug.LogWarning($"[NetworkManager] Leave room failed: {request.error} (Code: {request.responseCode})");
+// //                     Debug.LogWarning($"[NetworkManager] Leave room failed: {request.error} (Code: {request.responseCode})");
                 }
 
                 DisconnectWebSocket();
@@ -434,26 +434,26 @@ namespace MultiplayerGame
         private IEnumerator StartGameCoroutine()
         {
             string url = $"{serverUrl}/api/rooms/{CurrentRoomId}/start?player_id={PlayerId}";
-            Debug.Log($"[NetworkManager] Starting game: {CurrentRoomId}");
-            Debug.Log($"[NetworkManager] POST {url}");
+// //             Debug.Log($"[NetworkManager] Starting game: {CurrentRoomId}");
+// //             Debug.Log($"[NetworkManager] POST {url}");
 
             using (UnityWebRequest request = new UnityWebRequest(url, "POST"))
             {
                 request.downloadHandler = new DownloadHandlerBuffer();
                 yield return request.SendWebRequest();
 
-                Debug.Log($"[NetworkManager] Response Code: {request.responseCode}");
+// //                 Debug.Log($"[NetworkManager] Response Code: {request.responseCode}");
                 
                 if (request.result == UnityWebRequest.Result.Success)
                 {
-                    Debug.Log($"[NetworkManager] ✓ Game started successfully, waiting for WebSocket notification...");
+// //                     Debug.Log($"[NetworkManager] ✓ Game started successfully, waiting for WebSocket notification...");
                     StopLobbyPolling();
                 }
                 else
                 {
                     string errorMsg = $"Failed to start game: {request.error} (Code: {request.responseCode})";
-                    Debug.LogError($"[NetworkManager] ✗ {errorMsg}");
-                    Debug.LogError($"[NetworkManager] Response: {request.downloadHandler.text}");
+// //                     Debug.LogError($"[NetworkManager] ✗ {errorMsg}");
+// //                     Debug.LogError($"[NetworkManager] Response: {request.downloadHandler.text}");
                     OnError?.Invoke(errorMsg);
                 }
             }
@@ -478,7 +478,7 @@ namespace MultiplayerGame
 
         private IEnumerator PollLobbyDetails()
         {
-            Debug.Log("[NetworkManager] Starting lobby polling (failsafe)");
+// //             Debug.Log("[NetworkManager] Starting lobby polling (failsafe)");
             while (!string.IsNullOrEmpty(CurrentRoomId) && CurrentRoom != null && !CurrentRoom.is_game_started)
             {
                 yield return new WaitForSeconds(3.0f);
@@ -502,26 +502,26 @@ namespace MultiplayerGame
         {
             // Backend expects: ws://host:port/ws/{player_id}
             string wsEndpoint = $"{wsUrl}/ws/{PlayerId}";
-            Debug.Log($"[NetworkManager] Connecting to WebSocket for registration: {wsEndpoint}");
+// //             Debug.Log($"[NetworkManager] Connecting to WebSocket for registration: {wsEndpoint}");
             
             webSocket = new WebSocketClient(wsEndpoint);
             
             webSocket.OnConnected += () => {
-                Debug.Log($"[NetworkManager] ✓ WebSocket connected - Player registered with backend");
+// //                 Debug.Log($"[NetworkManager] ✓ WebSocket connected - Player registered with backend");
                 isConnected = true;
                 isPlayerRegistered = true;
             };
             
             webSocket.OnMessage += HandleWebSocketMessage;
             webSocket.OnError += (error) => {
-                Debug.LogError($"[NetworkManager] WebSocket registration error: {error}");
-                Debug.LogError($"[NetworkManager] Cannot create/join rooms without backend connection");
+// //                 Debug.LogError($"[NetworkManager] WebSocket registration error: {error}");
+// //                 Debug.LogError($"[NetworkManager] Cannot create/join rooms without backend connection");
                 OnError?.Invoke($"Failed to connect to server: {error}");
                 isPlayerRegistered = false;
             };
             
             webSocket.OnDisconnected += () => {
-                Debug.LogWarning($"[NetworkManager] WebSocket disconnected!");
+// //                 Debug.LogWarning($"[NetworkManager] WebSocket disconnected!");
                 isConnected = false;
                 // Don't set isPlayerRegistered to false here - we can reconnect
             };
@@ -534,22 +534,22 @@ namespace MultiplayerGame
             // If already connected from registration, just send JOIN_ROOM
             if (webSocket != null && isConnected)
             {
-                Debug.Log($"[NetworkManager] WebSocket already connected, sending JOIN_ROOM message");
+// //                 Debug.Log($"[NetworkManager] WebSocket already connected, sending JOIN_ROOM message");
                 SendJoinRoomMessage();
                 return;
             }
 
             // Otherwise establish new connection (shouldn't normally happen)
-            Debug.LogWarning($"[NetworkManager] WebSocket not connected, establishing new connection");
+// //             Debug.LogWarning($"[NetworkManager] WebSocket not connected, establishing new connection");
             
             // Backend expects: ws://host:port/ws/{player_id}
             string wsEndpoint = $"{wsUrl}/ws/{PlayerId}";
-            Debug.Log($"[NetworkManager] Connecting to WebSocket: {wsEndpoint}");
+// //             Debug.Log($"[NetworkManager] Connecting to WebSocket: {wsEndpoint}");
             
             webSocket = new WebSocketClient(wsEndpoint);
             
             webSocket.OnConnected += () => {
-                Debug.Log($"[NetworkManager] ✓ WebSocket connected, sending JOIN_ROOM message");
+// //                 Debug.Log($"[NetworkManager] ✓ WebSocket connected, sending JOIN_ROOM message");
                 isConnected = true;
                 // Send JOIN_ROOM message after connection
                 SendJoinRoomMessage();
@@ -557,12 +557,12 @@ namespace MultiplayerGame
             
             webSocket.OnMessage += HandleWebSocketMessage;
             webSocket.OnError += (error) => {
-                Debug.LogError($"[NetworkManager] WebSocket error: {error}");
+// //                 Debug.LogError($"[NetworkManager] WebSocket error: {error}");
                 OnError?.Invoke($"WebSocket error: {error}");
             };
             
             webSocket.OnDisconnected += () => {
-                Debug.LogWarning($"[NetworkManager] WebSocket disconnected during game!");
+// //                 Debug.LogWarning($"[NetworkManager] WebSocket disconnected during game!");
                 isConnected = false;
             };
             
@@ -573,7 +573,7 @@ namespace MultiplayerGame
         {
             if (string.IsNullOrEmpty(CurrentRoomId))
             {
-                Debug.LogWarning("[NetworkManager] Cannot send JOIN_ROOM: CurrentRoomId is null");
+// //                 Debug.LogWarning("[NetworkManager] Cannot send JOIN_ROOM: CurrentRoomId is null");
                 return;
             }
 
@@ -589,7 +589,7 @@ namespace MultiplayerGame
             };
 
             string json = JsonUtility.ToJson(joinMessage);
-            Debug.Log($"[NetworkManager] Sending JOIN_ROOM: {json}");
+// //             Debug.Log($"[NetworkManager] Sending JOIN_ROOM: {json}");
             webSocket?.Send(json);
         }
 
@@ -597,53 +597,53 @@ namespace MultiplayerGame
         {
             if (webSocket != null)
             {
-                Debug.Log($"[NetworkManager] Disconnecting WebSocket");
+// //                 Debug.Log($"[NetworkManager] Disconnecting WebSocket");
                 webSocket.Disconnect();
                 webSocket = null;
             }
             isConnected = false;
-            Debug.Log($"[NetworkManager] ✓ WebSocket disconnected");
+// //             Debug.Log($"[NetworkManager] ✓ WebSocket disconnected");
         }
 
         private void HandleWebSocketMessage(string message)
         {
-            Debug.Log($"[NetworkManager] WebSocket message received: {message}");
+// //             Debug.Log($"[NetworkManager] WebSocket message received: {message}");
             
             try
             {
                 // Parse message - backend sends: { "type": "MESSAGE_TYPE", "data": {...} }
                 var msgWrapper = JsonUtility.FromJson<WebSocketMessageWrapper>(message);
-                Debug.Log($"[NetworkManager] Message type: {msgWrapper.type}");
+// //                 Debug.Log($"[NetworkManager] Message type: {msgWrapper.type}");
                 
                 switch (msgWrapper.type)
                 {
                     case "CONNECT":
-                        Debug.Log($"[NetworkManager] ✓ Connection confirmed by server");
+// //                         Debug.Log($"[NetworkManager] ✓ Connection confirmed by server");
                         break;
                     
                     case "room_update":
                     case "ROOM_UPDATE":
-                        Debug.Log($"[NetworkManager] Room update received");
+// //                         Debug.Log($"[NetworkManager] Room update received");
                         // Parse the room update data
                         var roomUpdate = JsonUtility.FromJson<RoomUpdateData>(msgWrapper.data);
-                        Debug.Log($"[NetworkManager] Room update action: {roomUpdate.action}, player: {roomUpdate.player_id}");
+// //                         Debug.Log($"[NetworkManager] Room update action: {roomUpdate.action}, player: {roomUpdate.player_id}");
                         
                         // Update name cache if provided
                         if (!string.IsNullOrEmpty(roomUpdate.player_id) && !string.IsNullOrEmpty(roomUpdate.username))
                         {
                             PlayerNames[roomUpdate.player_id] = roomUpdate.username;
                             OnPlayerNamesUpdated?.Invoke();
-                            Debug.Log($"[NetworkManager] Updated name for {roomUpdate.player_id}: {roomUpdate.username}");
+// //                             Debug.Log($"[NetworkManager] Updated name for {roomUpdate.player_id}: {roomUpdate.username}");
                         }
                         
                         if (roomUpdate.action == "player_joined")
                         {
-                            Debug.Log($"[NetworkManager] Player {roomUpdate.username} joined the room");
+// //                             Debug.Log($"[NetworkManager] Player {roomUpdate.username} joined the room");
                             
                             if (roomUpdate.player != null && !string.IsNullOrEmpty(roomUpdate.player.player_id))
                             {
                                 // Use the provided player object to spawn immediately
-                                Debug.Log($"[NetworkManager] Spawning joined player from update data: {roomUpdate.player.player_id}");
+// //                                 Debug.Log($"[NetworkManager] Spawning joined player from update data: {roomUpdate.player.player_id}");
                                 GameStateManager.Instance?.SpawnRemotePlayer(
                                     roomUpdate.player.player_id, 
                                     roomUpdate.player.position.ToVector3(), 
@@ -656,7 +656,7 @@ namespace MultiplayerGame
                                     if (!CurrentRoom.current_players.Contains(roomUpdate.player.player_id))
                                     {
                                         CurrentRoom.current_players.Add(roomUpdate.player.player_id);
-                                        Debug.Log($"[NetworkManager] Added {roomUpdate.player.player_id} to local room player list. Count: {CurrentRoom.current_players.Count}");
+// //                                         Debug.Log($"[NetworkManager] Added {roomUpdate.player.player_id} to local room player list. Count: {CurrentRoom.current_players.Count}");
                                         // Trigger UI update using OnRoomJoined (since RoomUI listens to this)
                                         OnRoomJoined?.Invoke(CurrentRoom);
                                     }
@@ -665,35 +665,35 @@ namespace MultiplayerGame
                             else
                             {
                                 // Fallback to fetching room details if player object is missing
-                                Debug.LogWarning("[NetworkManager] Player object missing in room_update, fetching details...");
+// //                                 Debug.LogWarning("[NetworkManager] Player object missing in room_update, fetching details...");
                                 StartCoroutine(GetRoomDetails(CurrentRoomId, false));
                             }
                         }
                         else if (roomUpdate.action == "player_left")
                         {
-                            Debug.Log($"[NetworkManager] Player {roomUpdate.username} left the room");
+// //                             Debug.Log($"[NetworkManager] Player {roomUpdate.username} left the room");
                             StartCoroutine(GetRoomDetails(CurrentRoomId, false));
                         }
                         break;
 
                     case "join_room":
-                        Debug.Log($"[NetworkManager] Join room data received via WebSocket");
+// //                         Debug.Log($"[NetworkManager] Join room data received via WebSocket");
                         var joinData = JsonUtility.FromJson<JoinRoomData>(msgWrapper.data);
                         
                         if (joinData.players != null)
                         {
-                            Debug.Log($"[NetworkManager] Processing {joinData.players.Count} existing players...");
+// //                             Debug.Log($"[NetworkManager] Processing {joinData.players.Count} existing players...");
                             foreach (var p in joinData.players)
                             {
                                 // Cache Names
                                 if (!string.IsNullOrEmpty(p.player_id) && !string.IsNullOrEmpty(p.username))
                                 {
                                     PlayerNames[p.player_id] = p.username;
-                                    Debug.Log($"[NetworkManager] Cached name for {p.player_id}: {p.username}");
+// //                                     Debug.Log($"[NetworkManager] Cached name for {p.player_id}: {p.username}");
                                 }
                                 else
                                 {
-                                    Debug.LogWarning($"[NetworkManager] Missing name info for {p.player_id} (Username: '{p.username}')");
+// //                                     Debug.LogWarning($"[NetworkManager] Missing name info for {p.player_id} (Username: '{p.username}')");
                                 }
 
                                 // Don't spawn ourselves
@@ -712,7 +712,7 @@ namespace MultiplayerGame
                     
                     case "PLAYER_ACTION":
                     case "player_action": // Handle lowercase type as per requirements
-                        // Debug.Log($"[NetworkManager] Player action received");
+// //                         // Debug.Log($"[NetworkManager] Player action received");
                         
                         // We need to parse specifically for this type because 'data' is an object, not a string
                         var detailedMsg = JsonUtility.FromJson<ReplicationMessage>(message);
@@ -737,12 +737,12 @@ namespace MultiplayerGame
                         else 
                         {
                             // Fallback for flat format if necessary, or just log warning
-                            Debug.LogWarning("[NetworkManager] Failed to parse detailed player_action");
+// //                             Debug.LogWarning("[NetworkManager] Failed to parse detailed player_action");
                         }
                         break;
                     
                     case "STATE_UPDATE":
-                        Debug.Log($"[NetworkManager] State update received");
+// //                         Debug.Log($"[NetworkManager] State update received");
                         var state = JsonUtility.FromJson<GameState>(msgWrapper.data);
                         OnGameStateUpdated?.Invoke(state);
                         break;
@@ -753,18 +753,18 @@ namespace MultiplayerGame
                         // Treat "Player already in room" as success/warning since we likely joined via HTTP first
                         if (!string.IsNullOrEmpty(errorData.error) && errorData.error.Contains("Player already in room"))
                         {
-                            Debug.Log($"[NetworkManager] Server reported '{errorData.error}' - ignoring as player is already joined via REST API");
+// //                             Debug.Log($"[NetworkManager] Server reported '{errorData.error}' - ignoring as player is already joined via REST API");
                         }
                         else
                         {
-                            Debug.LogError($"[NetworkManager] Server error: {errorData.error}");
+// //                             Debug.LogError($"[NetworkManager] Server error: {errorData.error}");
                             OnError?.Invoke(errorData.error);
                         }
                         break;
                     
                     case "game_start":
                     case "START_GAME":
-                        Debug.Log($"[NetworkManager] Game start notification received!");
+// //                         Debug.Log($"[NetworkManager] Game start notification received!");
                         OnGameStarted?.Invoke();
                         break;
 
@@ -774,16 +774,16 @@ namespace MultiplayerGame
                         break;
                     
                     default:
-                        Debug.LogWarning($"[NetworkManager] Unknown message type: {msgWrapper.type}");
+// //                         Debug.LogWarning($"[NetworkManager] Unknown message type: {msgWrapper.type}");
                         break;
                 }
             }
             catch (Exception e)
             {
                 string errorMsg = $"Failed to parse WebSocket message: {e.Message}";
-                Debug.LogError($"[NetworkManager] ✗ {errorMsg}");
-                Debug.LogError($"[NetworkManager] Message was: {message}");
-                Debug.LogError($"[NetworkManager] Stack trace: {e.StackTrace}");
+// //                 Debug.LogError($"[NetworkManager] ✗ {errorMsg}");
+// //                 Debug.LogError($"[NetworkManager] Message was: {message}");
+// //                 Debug.LogError($"[NetworkManager] Stack trace: {e.StackTrace}");
                 OnError?.Invoke(errorMsg);
             }
         }
@@ -801,33 +801,33 @@ namespace MultiplayerGame
         /// </summary>
         public void VerifyConnection()
         {
-            Debug.Log($"[NetworkManager] ========== Connection State Verification ==========");
-            Debug.Log($"[NetworkManager] isConnected flag: {isConnected}");
-            Debug.Log($"[NetworkManager] isPlayerRegistered flag: {isPlayerRegistered}");
-            Debug.Log($"[NetworkManager] WebSocket object: {(webSocket != null ? "exists" : "null")}");
+// //             Debug.Log($"[NetworkManager] ========== Connection State Verification ==========");
+// //             Debug.Log($"[NetworkManager] isConnected flag: {isConnected}");
+// //             Debug.Log($"[NetworkManager] isPlayerRegistered flag: {isPlayerRegistered}");
+// //             Debug.Log($"[NetworkManager] WebSocket object: {(webSocket != null ? "exists" : "null")}");
             
             if (webSocket != null)
             {
                 // Access the internal WebSocket state through reflection or add a public property
                 // For now, we'll try to send a test message to verify
-                Debug.Log($"[NetworkManager] WebSocket exists, attempting to verify state...");
+// //                 Debug.Log($"[NetworkManager] WebSocket exists, attempting to verify state...");
                 
                 // Check if we can send (the Send method will log if it fails)
                 SendHeartbeat();
             }
             else
             {
-                Debug.LogWarning($"[NetworkManager] WebSocket is null but isConnected={isConnected}");
+// //                 Debug.LogWarning($"[NetworkManager] WebSocket is null but isConnected={isConnected}");
                 if (isConnected)
                 {
-                    Debug.LogWarning($"[NetworkManager] Fixing connection state mismatch");
+// //                     Debug.LogWarning($"[NetworkManager] Fixing connection state mismatch");
                     isConnected = false;
                 }
             }
             
-            Debug.Log($"[NetworkManager] CurrentRoomId: {CurrentRoomId}");
-            Debug.Log($"[NetworkManager] PlayerId: {PlayerId}");
-            Debug.Log($"[NetworkManager] ========================================");
+// //             Debug.Log($"[NetworkManager] CurrentRoomId: {CurrentRoomId}");
+// //             Debug.Log($"[NetworkManager] PlayerId: {PlayerId}");
+// //             Debug.Log($"[NetworkManager] ========================================");
         }
 
         #endregion
@@ -844,16 +844,16 @@ namespace MultiplayerGame
         {
             if (!isConnected)
             {
-                Debug.LogWarning($"[NetworkManager] Cannot send {actionType} action: isConnected={isConnected}");
-                Debug.LogWarning($"[NetworkManager] WebSocket state: {webSocket?.GetType().Name ?? "null"}");
-                Debug.LogWarning($"[NetworkManager] CurrentRoomId: {CurrentRoomId}");
+// //                 Debug.LogWarning($"[NetworkManager] Cannot send {actionType} action: isConnected={isConnected}");
+// //                 Debug.LogWarning($"[NetworkManager] WebSocket state: {webSocket?.GetType().Name ?? "null"}");
+// //                 Debug.LogWarning($"[NetworkManager] CurrentRoomId: {CurrentRoomId}");
                 return;
             }
             
             if (webSocket == null)
             {
-                Debug.LogWarning($"[NetworkManager] Cannot send {actionType} action: WebSocket is null");
-                Debug.LogWarning($"[NetworkManager] isConnected flag is true but WebSocket is null - connection state mismatch!");
+// //                 Debug.LogWarning($"[NetworkManager] Cannot send {actionType} action: WebSocket is null");
+// //                 Debug.LogWarning($"[NetworkManager] isConnected flag is true but WebSocket is null - connection state mismatch!");
                 return;
             }
 
@@ -894,8 +894,8 @@ namespace MultiplayerGame
             };
 
             string json = JsonUtility.ToJson(message);
-            Debug.Log($"[NetworkManager] Sending {actionType} action");
-            Debug.Log($"[NetworkManager] Action JSON: {json}");
+// //             Debug.Log($"[NetworkManager] Sending {actionType} action");
+// //             Debug.Log($"[NetworkManager] Action JSON: {json}");
             webSocket?.Send(json);
         }
 
@@ -909,7 +909,7 @@ namespace MultiplayerGame
 
         public void SendMoveAction(Vector3 position)
         {
-            Debug.Log($"[NetworkManager] SendMoveAction called with position: {position}");
+// //             Debug.Log($"[NetworkManager] SendMoveAction called with position: {position}");
             SendMoveAction(position, Quaternion.identity);
         }
 
@@ -964,12 +964,12 @@ namespace MultiplayerGame
             // Duplicates should not disconnect the WebSocket
             if (Instance == this)
             {
-                Debug.Log("[NetworkManager] Singleton instance being destroyed, disconnecting WebSocket");
+// //                 Debug.Log("[NetworkManager] Singleton instance being destroyed, disconnecting WebSocket");
                 DisconnectWebSocket();
             }
             else
             {
-                Debug.Log("[NetworkManager] Duplicate instance being destroyed, keeping WebSocket connected");
+// //                 Debug.Log("[NetworkManager] Duplicate instance being destroyed, keeping WebSocket connected");
             }
         }
 

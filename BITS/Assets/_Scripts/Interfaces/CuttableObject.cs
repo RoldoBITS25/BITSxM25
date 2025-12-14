@@ -25,7 +25,7 @@ public class CuttableObject : MonoBehaviour, IInteractable
     {
         if (!hasBeenCut)
         {
-            Debug.Log("Interacting with Cuttable Object - Cutting!");
+//             Debug.Log("Interacting with Cuttable Object - Cutting!");
             OnCut(transform.position);
         }
     }
@@ -36,7 +36,7 @@ public class CuttableObject : MonoBehaviour, IInteractable
             return;
             
         hasBeenCut = true;
-        Debug.Log($"Object {gameObject.name} cut at position {cutPosition}");
+//         Debug.Log($"Object {gameObject.name} cut at position {cutPosition}");
 
         // Spawn cut effect if available
         if (cutEffectPrefab != null)

@@ -23,7 +23,7 @@ namespace MultiplayerGame
         [ContextMenu("Setup Test Scene")]
         public void SetupTestScene()
         {
-            Debug.Log("Setting up test scene...");
+//             Debug.Log("Setting up test scene...");
 
             // Create floor
             CreateFloor();
@@ -37,7 +37,7 @@ namespace MultiplayerGame
             // Setup camera
             SetupCamera();
 
-            Debug.Log("Test scene ready! Use WASD to move, E to grab, C to cut, B to break");
+//             Debug.Log("Test scene ready! Use WASD to move, E to grab, C to cut, B to break");
         }
 
         private void CreateFloor()
@@ -65,7 +65,7 @@ namespace MultiplayerGame
             var existingPlayer = GameObject.Find("TestPlayer");
             if (existingPlayer != null)
             {
-                Debug.Log("Player already exists");
+//                 Debug.Log("Player already exists");
                 return;
             }
 
@@ -91,7 +91,7 @@ namespace MultiplayerGame
                 renderer.material = mat;
             }
 
-            Debug.Log("Player created! Use WASD to move");
+//             Debug.Log("Player created! Use WASD to move");
         }
 
         private void CreateTestObjects()
@@ -131,7 +131,7 @@ namespace MultiplayerGame
                 }
             }
 
-            Debug.Log("Created 5 interactable objects");
+//             Debug.Log("Created 5 interactable objects");
         }
 
         private void SetupCamera()
@@ -168,7 +168,7 @@ namespace MultiplayerGame
                 DestroyImmediate(obj.gameObject);
             }
 
-            Debug.Log("Test scene cleared");
+//             Debug.Log("Test scene cleared");
         }
     }
 }

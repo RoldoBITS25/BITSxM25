@@ -15,16 +15,16 @@ namespace MultiplayerGame.UI
 
         private void Start()
         {
-            Debug.Log("[ButtonDebugHelper] Starting button debug helper");
+//             Debug.Log("[ButtonDebugHelper] Starting button debug helper");
 
             // Find all buttons in scene
             Button[] allButtons = FindObjectsByType<Button>(FindObjectsSortMode.None);
-            Debug.Log($"[ButtonDebugHelper] Found {allButtons.Length} buttons in scene");
+//             Debug.Log($"[ButtonDebugHelper] Found {allButtons.Length} buttons in scene");
 
             foreach (Button btn in allButtons)
             {
                 string buttonName = GetButtonPath(btn.transform);
-                Debug.Log($"[ButtonDebugHelper] Button: {buttonName}");
+//                 Debug.Log($"[ButtonDebugHelper] Button: {buttonName}");
                 
                 // Add debug listener to each button
                 btn.onClick.AddListener(() => OnButtonClicked(buttonName));
@@ -34,11 +34,11 @@ namespace MultiplayerGame.UI
             UnityEngine.EventSystems.EventSystem eventSystem = FindFirstObjectByType<UnityEngine.EventSystems.EventSystem>();
             if (eventSystem == null)
             {
-                Debug.LogError("[ButtonDebugHelper] ✗ NO EVENTSYSTEM FOUND! Buttons won't work without it!");
+//                 Debug.LogError("[ButtonDebugHelper] ✗ NO EVENTSYSTEM FOUND! Buttons won't work without it!");
             }
             else
             {
-                Debug.Log($"[ButtonDebugHelper] ✓ EventSystem found: {eventSystem.name}");
+//                 Debug.Log($"[ButtonDebugHelper] ✓ EventSystem found: {eventSystem.name}");
             }
 
             // Check for GraphicRaycaster on Canvas
@@ -48,18 +48,18 @@ namespace MultiplayerGame.UI
                 var raycaster = canvas.GetComponent<UnityEngine.UI.GraphicRaycaster>();
                 if (raycaster == null)
                 {
-                    Debug.LogWarning($"[ButtonDebugHelper] ✗ Canvas '{canvas.name}' has no GraphicRaycaster! Buttons won't work!");
+//                     Debug.LogWarning($"[ButtonDebugHelper] ✗ Canvas '{canvas.name}' has no GraphicRaycaster! Buttons won't work!");
                 }
                 else
                 {
-                    Debug.Log($"[ButtonDebugHelper] ✓ Canvas '{canvas.name}' has GraphicRaycaster");
+//                     Debug.Log($"[ButtonDebugHelper] ✓ Canvas '{canvas.name}' has GraphicRaycaster");
                 }
             }
         }
 
         private void OnButtonClicked(string buttonName)
         {
-            Debug.Log($"[ButtonDebugHelper] ★★★ BUTTON CLICKED: {buttonName} ★★★");
+//             Debug.Log($"[ButtonDebugHelper] ★★★ BUTTON CLICKED: {buttonName} ★★★");
         }
 
         private string GetButtonPath(Transform transform)
@@ -80,56 +80,56 @@ namespace MultiplayerGame.UI
         public void ListAllButtons()
         {
             Button[] allButtons = FindObjectsByType<Button>(FindObjectsSortMode.None);
-            Debug.Log($"========== Found {allButtons.Length} buttons ==========");
+//             Debug.Log($"========== Found {allButtons.Length} buttons ==========");
             
             foreach (Button btn in allButtons)
             {
                 string buttonName = GetButtonPath(btn.transform);
-                Debug.Log($"  - {buttonName}");
-                Debug.Log($"    Interactable: {btn.interactable}");
-                Debug.Log($"    Listeners: {btn.onClick.GetPersistentEventCount()}");
+//                 Debug.Log($"  - {buttonName}");
+//                 Debug.Log($"    Interactable: {btn.interactable}");
+//                 Debug.Log($"    Listeners: {btn.onClick.GetPersistentEventCount()}");
             }
         }
 
         [ContextMenu("Check UI Setup")]
         public void CheckUISetup()
         {
-            Debug.Log("========== UI Setup Check ==========");
+//             Debug.Log("========== UI Setup Check ==========");
 
             // Check EventSystem
             var eventSystem = FindFirstObjectByType<UnityEngine.EventSystems.EventSystem>();
-            Debug.Log($"EventSystem: {(eventSystem != null ? "✓ Found" : "✗ MISSING")}");
+//             Debug.Log($"EventSystem: {(eventSystem != null ? "✓ Found" : "✗ MISSING")}");
 
             // Check Canvases
             Canvas[] canvases = FindObjectsByType<Canvas>(FindObjectsSortMode.None);
-            Debug.Log($"Canvases: {canvases.Length}");
+//             Debug.Log($"Canvases: {canvases.Length}");
             
             foreach (Canvas canvas in canvases)
             {
-                Debug.Log($"  Canvas: {canvas.name}");
-                Debug.Log($"    Render Mode: {canvas.renderMode}");
-                Debug.Log($"    GraphicRaycaster: {(canvas.GetComponent<GraphicRaycaster>() != null ? "✓" : "✗")}");
+//                 Debug.Log($"  Canvas: {canvas.name}");
+//                 Debug.Log($"    Render Mode: {canvas.renderMode}");
+//                 Debug.Log($"    GraphicRaycaster: {(canvas.GetComponent<GraphicRaycaster>() != null ? "✓" : "✗")}");
             }
 
             // Check RoomUI
             var roomUI = FindFirstObjectByType<RoomUI>();
             if (roomUI != null)
             {
-                Debug.Log("RoomUI: ✓ Found");
+//                 Debug.Log("RoomUI: ✓ Found");
             }
             else
             {
-                Debug.Log("RoomUI: ✗ NOT FOUND");
+//                 Debug.Log("RoomUI: ✗ NOT FOUND");
             }
 
             // Check NetworkManager
             if (NetworkManager.Instance != null)
             {
-                Debug.Log("NetworkManager: ✓ Found");
+//                 Debug.Log("NetworkManager: ✓ Found");
             }
             else
             {
-                Debug.Log("NetworkManager: ✗ NOT FOUND");
+//                 Debug.Log("NetworkManager: ✗ NOT FOUND");
             }
         }
     }

@@ -24,7 +24,7 @@ namespace MultiplayerGame.UI
         [ContextMenu("Setup Main Menu UI")]
         public void SetupUI()
         {
-            Debug.Log("[MenuUISetup] Creating main menu UI...");
+//             Debug.Log("[MenuUISetup] Creating main menu UI...");
 
             // Check for EventSystem (required for UI interactions)
             UnityEngine.EventSystems.EventSystem eventSystem = FindFirstObjectByType<UnityEngine.EventSystems.EventSystem>();
@@ -37,15 +37,15 @@ namespace MultiplayerGame.UI
                 // If you get compile error, use StandaloneInputModule instead
                 #if ENABLE_INPUT_SYSTEM
                 eventSystemObj.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
-                Debug.Log("[MenuUISetup] ✓ Created EventSystem with InputSystemUIInputModule");
+//                 Debug.Log("[MenuUISetup] ✓ Created EventSystem with InputSystemUIInputModule");
                 #else
                 eventSystemObj.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
-                Debug.Log("[MenuUISetup] ✓ Created EventSystem with StandaloneInputModule");
+//                 Debug.Log("[MenuUISetup] ✓ Created EventSystem with StandaloneInputModule");
                 #endif
             }
             else
             {
-                Debug.Log("[MenuUISetup] ✓ EventSystem already exists");
+//                 Debug.Log("[MenuUISetup] ✓ EventSystem already exists");
             }
 
             // Create Canvas
@@ -103,7 +103,7 @@ namespace MultiplayerGame.UI
             // Ensure NetworkManager exists
             if (NetworkManager.Instance == null)
             {
-                Debug.Log("[MenuUISetup] Creating NetworkManager...");
+//                 Debug.Log("[MenuUISetup] Creating NetworkManager...");
                 GameObject networkManagerObj = new GameObject("NetworkManager");
                 NetworkManager netManager = networkManagerObj.AddComponent<NetworkManager>();
                 
@@ -119,15 +119,15 @@ namespace MultiplayerGame.UI
                 if (wsUrlField != null)
                     wsUrlField.SetValue(netManager, "ws://10.166.9.144:8000");
                     
-                Debug.Log("[MenuUISetup] ✓ NetworkManager created");
+//                 Debug.Log("[MenuUISetup] ✓ NetworkManager created");
             }
             else
             {
-                Debug.Log("[MenuUISetup] ✓ NetworkManager already exists");
+//                 Debug.Log("[MenuUISetup] ✓ NetworkManager already exists");
             }
 
-            Debug.Log("[MenuUISetup] ✓ Main menu UI created successfully!");
-            Debug.Log("[MenuUISetup] Please assign the UI element references in the Inspector if needed.");
+//             Debug.Log("[MenuUISetup] ✓ Main menu UI created successfully!");
+//             Debug.Log("[MenuUISetup] Please assign the UI element references in the Inspector if needed.");
         }
 
         private GameObject CreatePanel(Transform parent, string name, Color bgColor)
@@ -513,15 +513,15 @@ namespace MultiplayerGame.UI
             if (field != null && value != null)
             {
                 field.SetValue(instance, value);
-                Debug.Log($"[MenuUISetup] Assigned {fieldName}");
+//                 Debug.Log($"[MenuUISetup] Assigned {fieldName}");
             }
             else if (field == null)
             {
-                Debug.LogWarning($"[MenuUISetup] Field {fieldName} not found");
+//                 Debug.LogWarning($"[MenuUISetup] Field {fieldName} not found");
             }
             else
             {
-                Debug.LogWarning($"[MenuUISetup] Value for {fieldName} is null");
+//                 Debug.LogWarning($"[MenuUISetup] Value for {fieldName} is null");
             }
         }
     }

@@ -27,7 +27,7 @@ namespace MultiplayerGame
             rb = GetComponent<Rigidbody>();
             if (rb == null)
             {
-                Debug.LogError("SimplePlayerController requires a Rigidbody component! Please add one to the Player GameObject.");
+//                 Debug.LogError("SimplePlayerController requires a Rigidbody component! Please add one to the Player GameObject.");
                 enabled = false; // Disable this script to prevent further errors
                 return;
             }
@@ -199,7 +199,7 @@ namespace MultiplayerGame
                 obj.transform.SetParent(transform);
                 obj.transform.localPosition = new Vector3(0, 1, 1);
                 
-                Debug.Log($"Grabbed {obj.name}");
+//                 Debug.Log($"Grabbed {obj.name}");
             }
         }
 
@@ -207,7 +207,7 @@ namespace MultiplayerGame
         {
             if (heldObject != null)
             {
-                Debug.Log($"Released {heldObject.name}");
+//                 Debug.Log($"Released {heldObject.name}");
                 
                 var simpleInt = heldObject.GetComponent<SimpleInteractable>();
                 var complexInt = heldObject.GetComponent<InteractableObject>();

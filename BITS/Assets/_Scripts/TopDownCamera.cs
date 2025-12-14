@@ -240,11 +240,11 @@ namespace MultiplayerGame
             if (target != null)
             {
                 targetPosition = target.position;
-                Debug.Log($"[TopDownCamera] Follow target set to: {target.name} at position {target.position}");
+//                 Debug.Log($"[TopDownCamera] Follow target set to: {target.name} at position {target.position}");
             }
             else
             {
-                Debug.LogWarning("[TopDownCamera] Follow target set to null");
+//                 Debug.LogWarning("[TopDownCamera] Follow target set to null");
             }
         }
 

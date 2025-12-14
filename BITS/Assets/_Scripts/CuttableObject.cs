@@ -34,7 +34,7 @@ namespace MultiplayerGame
         public void OnCut(Vector2 cutPosition)
         {
             hasBeenCut = true;
-            Debug.Log($"Object {gameObject.name} cut at position {cutPosition}");
+//             Debug.Log($"Object {gameObject.name} cut at position {cutPosition}");
 
             // Spawn cut effect if available
             if (cutEffectPrefab != null)

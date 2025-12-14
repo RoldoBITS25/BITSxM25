@@ -15,6 +15,6 @@ public class MovableObject : MonoBehaviour, IInteractable
     }
     public void Interact()
     {
-        Debug.Log("Interacting with Movable Object");
+//         Debug.Log("Interacting with Movable Object");
     }
 }

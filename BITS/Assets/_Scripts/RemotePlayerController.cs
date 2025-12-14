@@ -35,14 +35,14 @@ namespace MultiplayerGame
         {
             if (!isInitialized) return;
 
-            Debug.Log($"[RemotePlayerController] {playerId} - SetTarget called: pos={position}, rot={rotation.eulerAngles}");
+//             Debug.Log($"[RemotePlayerController] {playerId} - SetTarget called: pos={position}, rot={rotation.eulerAngles}");
             targetPosition = position;
             targetRotation = rotation;
 
             // If the distance is too large, snap immediately to avoid weird sliding across the map
             if (Vector3.Distance(transform.position, targetPosition) > snapDistance)
             {
-                Debug.Log($"[RemotePlayerController] {playerId} - Snapping to position (distance > {snapDistance})");
+//                 Debug.Log($"[RemotePlayerController] {playerId} - Snapping to position (distance > {snapDistance})");
                 transform.position = targetPosition;
                 transform.rotation = targetRotation;
             }

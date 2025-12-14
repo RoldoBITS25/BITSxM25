@@ -44,7 +44,7 @@ namespace MultiplayerGame
         public void OnBreak()
         {
             hasBeenBroken = true;
-            Debug.Log($"Object {gameObject.name} broken");
+// //             Debug.Log($"Object {gameObject.name} broken");
 
             // Spawn drop items if prefab is assigned
             if (dropPrefab != null)

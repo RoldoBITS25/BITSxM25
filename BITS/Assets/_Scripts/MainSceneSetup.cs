@@ -66,14 +66,14 @@ namespace MultiplayerGame
             }
             else if (waitForRoomJoin)
             {
-                Debug.Log("[MainSceneSetup] Waiting for room join before setup...");
+// //                 Debug.Log("[MainSceneSetup] Waiting for room join before setup...");
             }
         }
 
         [ContextMenu("Setup Scene")]
         public void SetupScene()
         {
-            Debug.Log("Setting up main multiplayer scene...");
+// //             Debug.Log("Setting up main multiplayer scene...");
             
             if (setupCamera)
                 SetupTopDownCamera();
@@ -96,7 +96,7 @@ namespace MultiplayerGame
             if (spawnTestPlayer)
                 SpawnTestPlayer();
             
-            Debug.Log("Main scene setup complete!");
+// //             Debug.Log("Main scene setup complete!");
         }
 
         private void SetupDebugUI()
@@ -106,7 +106,7 @@ namespace MultiplayerGame
                 if (multiplayerDebugUIPrefab != null)
                 {
                     Instantiate(multiplayerDebugUIPrefab);
-                    Debug.Log("[MainSceneSetup] Spawned Debug UI from prefab");
+// //                     Debug.Log("[MainSceneSetup] Spawned Debug UI from prefab");
                 }
                 else
                 {
@@ -114,7 +114,7 @@ namespace MultiplayerGame
                     GameObject debugObj = new GameObject("MultiplayerDebugUI");
                     var debugUI = debugObj.AddComponent<MultiplayerDebugUI>();
                     debugUI.CreateDebugUI();
-                    Debug.Log("[MainSceneSetup] Created Debug UI programmatically");
+// //                     Debug.Log("[MainSceneSetup] Created Debug UI programmatically");
                 }
             }
         }
@@ -150,7 +150,7 @@ namespace MultiplayerGame
                 cam.backgroundColor = new Color(0.1f, 0.1f, 0.15f);
             }
             
-            Debug.Log($"Camera positioned at {mainCameraObj.transform.position} looking at {cameraFocusPoint}");
+// //             Debug.Log($"Camera positioned at {mainCameraObj.transform.position} looking at {cameraFocusPoint}");
         }
 
         private void SetupLighting()
@@ -180,7 +180,7 @@ namespace MultiplayerGame
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
             RenderSettings.ambientLight = new Color(0.4f, 0.4f, 0.45f);
             
-            Debug.Log("Lighting configured for top-down view");
+// //             Debug.Log("Lighting configured for top-down view");
         }
 
         private void SetupEnvironment()
@@ -198,7 +198,7 @@ namespace MultiplayerGame
             // Create boundary walls
             CreateBoundaryWalls();
             
-            Debug.Log("Environment created");
+// //             Debug.Log("Environment created");
         }
 
         private void CreateFloor()
@@ -290,7 +290,7 @@ namespace MultiplayerGame
             
             if (netManager == null)
             {
-                Debug.LogWarning("[MainSceneSetup] NetworkManager.Instance is null, creating new one");
+// //                 Debug.LogWarning("[MainSceneSetup] NetworkManager.Instance is null, creating new one");
                 // Create or find NetworkManager
                 networkManagerObj = GameObject.Find("NetworkManager");
                 if (networkManagerObj == null)
@@ -308,7 +308,7 @@ namespace MultiplayerGame
                 // Only override if in Editor or if explicitly requested for build (e.g. testing local build)
                 if (Application.isEditor || useLocalhostInBuild)
                 {
-                    Debug.Log($"[MainSceneSetup] Overriding NetworkManager URLs with: {serverUrl} (Localhost/Override)");
+// //                     Debug.Log($"[MainSceneSetup] Overriding NetworkManager URLs with: {serverUrl} (Localhost/Override)");
                     
                     var netManagerType = typeof(NetworkManager);
                     var serverUrlField = netManagerType.GetField("serverUrl", 
@@ -323,12 +323,12 @@ namespace MultiplayerGame
                 }
                 else
                 {
-                     Debug.Log("[MainSceneSetup] Using default NetworkManager URLs (Production/Build)");
+// //                      Debug.Log("[MainSceneSetup] Using default NetworkManager URLs (Production/Build)");
                 }
             }
             else
             {
-                Debug.Log("[MainSceneSetup] Using existing NetworkManager instance (DontDestroyOnLoad)");
+// //                 Debug.Log("[MainSceneSetup] Using existing NetworkManager instance (DontDestroyOnLoad)");
                 networkManagerObj = netManager.gameObject;
             }            
             // Create or find GameStateManager
@@ -357,24 +357,24 @@ namespace MultiplayerGame
             if (playerPrefabField != null && playerPrefab != null)
             {
                 playerPrefabField.SetValue(stateManager, playerPrefab);
-                Debug.Log($"[MainSceneSetup] ✓ Assigned player prefab to GameStateManager: {playerPrefab.name}");
+// //                 Debug.Log($"[MainSceneSetup] ✓ Assigned player prefab to GameStateManager: {playerPrefab.name}");
             }
             else if (playerPrefab == null)
             {
-                Debug.LogWarning("[MainSceneSetup] No player prefab assigned in MainSceneSetup. GameStateManager will create a default one.");
+// //                 Debug.LogWarning("[MainSceneSetup] No player prefab assigned in MainSceneSetup. GameStateManager will create a default one.");
             }
             
             if (spectatorPrefabField != null && spectatorCameraPrefab != null)
             {
                 spectatorPrefabField.SetValue(stateManager, spectatorCameraPrefab);
-                Debug.Log($"[MainSceneSetup] ✓ Assigned spectator prefab to GameStateManager: {spectatorCameraPrefab.name}");
+// //                 Debug.Log($"[MainSceneSetup] ✓ Assigned spectator prefab to GameStateManager: {spectatorCameraPrefab.name}");
             }
             else if (spectatorCameraPrefab == null)
             {
-                Debug.LogWarning("[MainSceneSetup] No spectator camera prefab assigned in MainSceneSetup.");
+// //                 Debug.LogWarning("[MainSceneSetup] No spectator camera prefab assigned in MainSceneSetup.");
             }
             
-            Debug.Log("Networking components configured");
+// //             Debug.Log("Networking components configured");
         }
 
         private void SetupSpawnPoints()
@@ -417,20 +417,20 @@ namespace MultiplayerGame
                 if (player1SpawnField != null)
                 {
                     player1SpawnField.SetValue(stateManager, player1Spawn.transform);
-                    Debug.Log($"[MainSceneSetup] ✓ Assigned Player 1 spawn point: {player1Spawn.transform.position}");
+// //                     Debug.Log($"[MainSceneSetup] ✓ Assigned Player 1 spawn point: {player1Spawn.transform.position}");
                 }
                 if (player2SpawnField != null)
                 {
                     player2SpawnField.SetValue(stateManager, player2Spawn.transform);
-                    Debug.Log($"[MainSceneSetup] ✓ Assigned Player 2 spawn point: {player2Spawn.transform.position}");
+// //                     Debug.Log($"[MainSceneSetup] ✓ Assigned Player 2 spawn point: {player2Spawn.transform.position}");
                 }
             }
             else
             {
-                Debug.LogWarning("[MainSceneSetup] GameStateManager not found, cannot assign spawn points");
+// //                 Debug.LogWarning("[MainSceneSetup] GameStateManager not found, cannot assign spawn points");
             }
             
-            Debug.Log("Spawn points created and assigned");
+// //             Debug.Log("Spawn points created and assigned");
         }
 
         private void SpawnTestObjects()
@@ -487,7 +487,7 @@ namespace MultiplayerGame
                 obj.transform.SetParent(testObjectsParent.transform);
             }
             
-            Debug.Log($"Spawned {numberOfTestObjects} test objects");
+// //             Debug.Log($"Spawned {numberOfTestObjects} test objects");
         }
 
         private void SpawnTestPlayer()
@@ -516,7 +516,7 @@ namespace MultiplayerGame
                 renderer.material = mat;
             }
 
-            Debug.Log("✓ Test player spawned! Use WASD to move, E to grab, C to cut, B to break");
+// //             Debug.Log("✓ Test player spawned! Use WASD to move, E to grab, C to cut, B to break");
         }
 
         [ContextMenu("Clear Scene")]
@@ -541,7 +541,7 @@ namespace MultiplayerGame
                 DestroyImmediate(environmentObj);
             }
             
-            Debug.Log("Scene cleared");
+// //             Debug.Log("Scene cleared");
         }
 
         private void OnDrawGizmos()
