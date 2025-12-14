@@ -16,8 +16,10 @@ namespace MultiplayerGame
         public static NetworkManager Instance { get; private set; }
 
         [Header("Server Configuration")]
-        [SerializeField] private string serverUrl = "http://10.166.9.144:8000";
-        [SerializeField] private string wsUrl = "ws://10.166.9.144:8000/ws";
+        [SerializeField] private string serverUrl = "http://127.0.0.1:8000";
+        [SerializeField] private string wsUrl = "ws://127.0.0.1:8000/ws";
+        // [SerializeField] private string serverUrl = "https://rankings-adapted-modeling-rich.trycloudflare.com";
+        // [SerializeField] private string wsUrl = "wss://rankings-adapted-modeling-rich.trycloudflare.com/ws";
 
         [Header("Player Info")]
         public string PlayerId { get; private set; }
@@ -25,7 +27,12 @@ namespace MultiplayerGame
         public Room CurrentRoom { get; private set; } // Cache the full room object
         public bool IsPlayer { get; private set; } // true = player, false = spectator
         public int PlayerNumber { get; private set; } // 1 or 2 for players, 0 for spectators
+
         public bool IsReadyForRoomOperations => isPlayerRegistered; // Check if connected to backend
+
+        // Username Handling
+        public string Username { get; private set; }
+        public Dictionary<string, string> PlayerNames { get; private set; } = new Dictionary<string, string>();
 
         // Events
         public event Action<Room> OnRoomCreated;
@@ -35,7 +42,9 @@ namespace MultiplayerGame
         public event Action<PlayerAction> OnPlayerActionReceived;
         public event Action<GameState> OnGameStateUpdated;
         public event Action OnGameStarted;
+
         public event Action<string> OnError;
+        public event Action OnPlayerNamesUpdated;
 
         private WebSocketClient webSocket;
         private bool isConnected = false;
@@ -69,6 +78,26 @@ namespace MultiplayerGame
         private string GeneratePlayerId()
         {
             return $"player_{Guid.NewGuid().ToString().Substring(0, 8)}";
+            return $"player_{Guid.NewGuid().ToString().Substring(0, 8)}";
+        }
+
+        public string GetPlayerName(string playerId)
+        {
+            if (string.IsNullOrEmpty(playerId)) return "Unknown";
+            
+            // Prefer dictionary lookup for authoritative name
+            if (PlayerNames.TryGetValue(playerId, out string name))
+            {
+                return name;
+            }
+            
+            // Fallback to local Username for our own player if not yet synced/cached
+            if (playerId == PlayerId && !string.IsNullOrEmpty(Username))
+            {
+                return Username;
+            }
+
+            return playerId; // Fallback to ID
         }
 
         #region Room Management
@@ -76,8 +105,11 @@ namespace MultiplayerGame
         /// <summary>
         /// Create a new game room
         /// </summary>
-        public void CreateRoom(string roomName, int maxPlayers = 4, bool isPrivate = false, string password = null)
+        public void CreateRoom(string roomName, int maxPlayers = 4, bool isPrivate = false, string password = null, string username = null)
         {
+            this.Username = !string.IsNullOrEmpty(username) ? username : PlayerId;
+            Debug.Log($"[NetworkManager] Set local username (CreateRoom) to: {this.Username}");
+
             if (!isPlayerRegistered)
             {
                 Debug.LogError("[NetworkManager] Cannot create room: Player not registered with backend yet. Please wait for WebSocket connection.");
@@ -131,6 +163,9 @@ namespace MultiplayerGame
                     
                     // Connect to WebSocket for real-time updates
                     ConnectWebSocket();
+                    
+                    // Start polling for lobby updates (failsafe for WebSocket issues)
+                    StartLobbyPolling();
                 }
                 else
                 {
@@ -223,8 +258,14 @@ namespace MultiplayerGame
         /// <summary>
         /// Join an existing room
         /// </summary>
-        public void JoinRoom(string roomId, string password = null)
+        /// <summary>
+        /// Join an existing room
+        /// </summary>
+        public void JoinRoom(string roomId, string password = null, string username = null)
         {
+            this.Username = !string.IsNullOrEmpty(username) ? username : PlayerId;
+            Debug.Log($"[NetworkManager] Set local username to: {this.Username}");
+
             if (!isPlayerRegistered)
             {
                 Debug.LogError("[NetworkManager] Cannot join room: Player not registered with backend yet. Please wait for WebSocket connection.");
@@ -237,17 +278,25 @@ namespace MultiplayerGame
 
         private IEnumerator JoinRoomCoroutine(string roomId, string password)
         {
-            string url = $"{serverUrl}/api/rooms/{roomId}/join?player_id={PlayerId}";
-            if (!string.IsNullOrEmpty(password))
-            {
-                url += $"&password={password}";
-            }
+            string url = $"{serverUrl}/api/rooms/join";
             
             Debug.Log($"[NetworkManager] Joining room: {roomId}");
             Debug.Log($"[NetworkManager] POST {url}");
 
+            var joinRequest = new RoomJoinRequest
+            {
+                join_code = roomId,
+                player_id = PlayerId,
+                password = password
+            };
+
+            string json = JsonUtility.ToJson(joinRequest);
+            Debug.Log($"[NetworkManager] Request Body: {json}");
+
             using (UnityWebRequest request = new UnityWebRequest(url, "POST"))
             {
+                byte[] bodyRaw = Encoding.UTF8.GetBytes(json);
+                request.uploadHandler = new UploadHandlerRaw(bodyRaw);
                 request.downloadHandler = new DownloadHandlerBuffer();
                 request.SetRequestHeader("Content-Type", "application/json");
 
@@ -259,8 +308,11 @@ namespace MultiplayerGame
                 if (request.result == UnityWebRequest.Result.Success)
                 {
                     Debug.Log($"[NetworkManager] ✓ Successfully joined room {roomId}");
-                    // Get room details to determine role
-                    yield return GetRoomDetails(roomId);
+                    // Get room details to determine role (connect WS explicitly)
+                    yield return GetRoomDetails(roomId, true);
+                    
+                    // Start polling for lobby updates
+                    StartLobbyPolling();
                 }
                 else
                 {
@@ -272,7 +324,7 @@ namespace MultiplayerGame
             }
         }
 
-        private IEnumerator GetRoomDetails(string roomId)
+        private IEnumerator GetRoomDetails(string roomId, bool connectWebSocket = true)
         {
             string url = $"{serverUrl}/api/rooms/{roomId}";
             Debug.Log($"[NetworkManager] GET {url}");
@@ -287,7 +339,7 @@ namespace MultiplayerGame
                 if (request.result == UnityWebRequest.Result.Success)
                 {
                     Room room = JsonUtility.FromJson<Room>(request.downloadHandler.text);
-                    CurrentRoomId = room.room_id;
+                    CurrentRoomId = room.join_code;
                     CurrentRoom = room; // Cache room
                     
                     // Determine player role (first 2 are players, rest are spectators)
@@ -309,8 +361,11 @@ namespace MultiplayerGame
 
                     OnRoomJoined?.Invoke(room);
                     
-                    // Connect to WebSocket for real-time updates
-                    ConnectWebSocket();
+                    // Connect to WebSocket for real-time updates ONLY if requested and not connected
+                    if (connectWebSocket && !isConnected)
+                    {
+                        ConnectWebSocket();
+                    }
                 }
                 else
                 {
@@ -361,6 +416,7 @@ namespace MultiplayerGame
                 IsPlayer = false;
                 PlayerNumber = 0;
                 OnRoomLeft?.Invoke();
+                StopLobbyPolling();
             }
         }
 
@@ -391,6 +447,7 @@ namespace MultiplayerGame
                 if (request.result == UnityWebRequest.Result.Success)
                 {
                     Debug.Log($"[NetworkManager] ✓ Game started successfully, waiting for WebSocket notification...");
+                    StopLobbyPolling();
                 }
                 else
                 {
@@ -398,6 +455,37 @@ namespace MultiplayerGame
                     Debug.LogError($"[NetworkManager] ✗ {errorMsg}");
                     Debug.LogError($"[NetworkManager] Response: {request.downloadHandler.text}");
                     OnError?.Invoke(errorMsg);
+                }
+            }
+        }
+
+        private Coroutine lobbyPollingCoroutine;
+
+        private void StartLobbyPolling()
+        {
+            if (lobbyPollingCoroutine != null) StopCoroutine(lobbyPollingCoroutine);
+            lobbyPollingCoroutine = StartCoroutine(PollLobbyDetails());
+        }
+
+        private void StopLobbyPolling()
+        {
+            if (lobbyPollingCoroutine != null)
+            {
+                StopCoroutine(lobbyPollingCoroutine);
+                lobbyPollingCoroutine = null;
+            }
+        }
+
+        private IEnumerator PollLobbyDetails()
+        {
+            Debug.Log("[NetworkManager] Starting lobby polling (failsafe)");
+            while (!string.IsNullOrEmpty(CurrentRoomId) && CurrentRoom != null && !CurrentRoom.is_game_started)
+            {
+                yield return new WaitForSeconds(3.0f);
+                if (!string.IsNullOrEmpty(CurrentRoomId))
+                {
+                    // Refresh details without reconnecting WS
+                    yield return GetRoomDetails(CurrentRoomId, false);
                 }
             }
         }
@@ -492,7 +580,7 @@ namespace MultiplayerGame
             var joinData = new WSJoinData
             {
                 room_id = CurrentRoomId,
-                username = PlayerId
+                username = !string.IsNullOrEmpty(this.Username) ? this.Username : PlayerId
             };
 
             var joinMessage = new WSJoinMessage
@@ -533,22 +621,92 @@ namespace MultiplayerGame
                         Debug.Log($"[NetworkManager] ✓ Connection confirmed by server");
                         break;
                     
+                    case "room_update":
                     case "ROOM_UPDATE":
                         Debug.Log($"[NetworkManager] Room update received");
                         // Parse the room update data
                         var roomUpdate = JsonUtility.FromJson<RoomUpdateData>(msgWrapper.data);
                         Debug.Log($"[NetworkManager] Room update action: {roomUpdate.action}, player: {roomUpdate.player_id}");
                         
+                        // Update name cache if provided
+                        if (!string.IsNullOrEmpty(roomUpdate.player_id) && !string.IsNullOrEmpty(roomUpdate.username))
+                        {
+                            PlayerNames[roomUpdate.player_id] = roomUpdate.username;
+                            OnPlayerNamesUpdated?.Invoke();
+                            Debug.Log($"[NetworkManager] Updated name for {roomUpdate.player_id}: {roomUpdate.username}");
+                        }
+                        
                         if (roomUpdate.action == "player_joined")
                         {
                             Debug.Log($"[NetworkManager] Player {roomUpdate.username} joined the room");
-                            // Refresh room details to update player list
-                            StartCoroutine(GetRoomDetails(CurrentRoomId));
+                            
+                            if (roomUpdate.player != null && !string.IsNullOrEmpty(roomUpdate.player.player_id))
+                            {
+                                // Use the provided player object to spawn immediately
+                                Debug.Log($"[NetworkManager] Spawning joined player from update data: {roomUpdate.player.player_id}");
+                                GameStateManager.Instance?.SpawnRemotePlayer(
+                                    roomUpdate.player.player_id, 
+                                    roomUpdate.player.position.ToVector3(), 
+                                    roomUpdate.player.rotation.ToQuaternion()
+                                );
+
+                                // UPDATE LOCAL ROOM STATE FOR UI
+                                if (CurrentRoom != null)
+                                {
+                                    if (!CurrentRoom.current_players.Contains(roomUpdate.player.player_id))
+                                    {
+                                        CurrentRoom.current_players.Add(roomUpdate.player.player_id);
+                                        Debug.Log($"[NetworkManager] Added {roomUpdate.player.player_id} to local room player list. Count: {CurrentRoom.current_players.Count}");
+                                        // Trigger UI update using OnRoomJoined (since RoomUI listens to this)
+                                        OnRoomJoined?.Invoke(CurrentRoom);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                // Fallback to fetching room details if player object is missing
+                                Debug.LogWarning("[NetworkManager] Player object missing in room_update, fetching details...");
+                                StartCoroutine(GetRoomDetails(CurrentRoomId, false));
+                            }
                         }
                         else if (roomUpdate.action == "player_left")
                         {
                             Debug.Log($"[NetworkManager] Player {roomUpdate.username} left the room");
-                            StartCoroutine(GetRoomDetails(CurrentRoomId));
+                            StartCoroutine(GetRoomDetails(CurrentRoomId, false));
+                        }
+                        break;
+
+                    case "join_room":
+                        Debug.Log($"[NetworkManager] Join room data received via WebSocket");
+                        var joinData = JsonUtility.FromJson<JoinRoomData>(msgWrapper.data);
+                        
+                        if (joinData.players != null)
+                        {
+                            Debug.Log($"[NetworkManager] Processing {joinData.players.Count} existing players...");
+                            foreach (var p in joinData.players)
+                            {
+                                // Cache Names
+                                if (!string.IsNullOrEmpty(p.player_id) && !string.IsNullOrEmpty(p.username))
+                                {
+                                    PlayerNames[p.player_id] = p.username;
+                                    Debug.Log($"[NetworkManager] Cached name for {p.player_id}: {p.username}");
+                                }
+                                else
+                                {
+                                    Debug.LogWarning($"[NetworkManager] Missing name info for {p.player_id} (Username: '{p.username}')");
+                                }
+
+                                // Don't spawn ourselves
+                                if (p.player_id != PlayerId)
+                                {
+                                    GameStateManager.Instance?.SpawnRemotePlayer(
+                                        p.player_id, 
+                                        p.position.ToVector3(), 
+                                        p.rotation.ToQuaternion()
+                                    );
+                                }
+                            }
+                            OnPlayerNamesUpdated?.Invoke();
                         }
                         break;
                     
@@ -589,8 +747,17 @@ namespace MultiplayerGame
                     
                     case "ERROR":
                         var errorData = JsonUtility.FromJson<ErrorData>(msgWrapper.data);
-                        Debug.LogError($"[NetworkManager] Server error: {errorData.error}");
-                        OnError?.Invoke(errorData.error);
+                        
+                        // Treat "Player already in room" as success/warning since we likely joined via HTTP first
+                        if (!string.IsNullOrEmpty(errorData.error) && errorData.error.Contains("Player already in room"))
+                        {
+                            Debug.Log($"[NetworkManager] Server reported '{errorData.error}' - ignoring as player is already joined via REST API");
+                        }
+                        else
+                        {
+                            Debug.LogError($"[NetworkManager] Server error: {errorData.error}");
+                            OnError?.Invoke(errorData.error);
+                        }
                         break;
                     
                     case "game_start":
@@ -753,6 +920,14 @@ namespace MultiplayerGame
     }
 
     [Serializable]
+    public class RoomJoinRequest
+    {
+        public string join_code;
+        public string player_id;
+        public string password;
+    }
+
+    [Serializable]
     public class Room
     {
         public string room_id;
@@ -762,6 +937,7 @@ namespace MultiplayerGame
         public List<string> current_players = new List<string>();
         public bool is_private;
         public bool is_game_started;
+        public string join_code;
     }
 
     [Serializable]
@@ -792,6 +968,24 @@ namespace MultiplayerGame
         public string player_id;
         public string username;
         public Room room;
+        public PlayerInfo player;
+    }
+
+    [Serializable]
+    public class JoinRoomData
+    {
+        public bool success;
+        public Room room;
+        public List<PlayerInfo> players;
+    }
+
+    [Serializable]
+    public class PlayerInfo
+    {
+        public string player_id;
+        public string username;
+        public PacketVector3 position;
+        public PacketVector3 rotation;
     }
 
     [Serializable]

@@ -28,6 +28,11 @@ namespace MultiplayerGame.UI
         [SerializeField] private Button createRoomButton;
         [SerializeField] private Button backToMenuButton;
         [SerializeField] private TextMeshProUGUI noRoomsText;
+        [SerializeField] private TMP_InputField usernameInput;
+
+        [Header("Join Room")]
+        [SerializeField] private TMP_InputField roomCodeInput;
+        [SerializeField] private Button joinWithCodeButton;
 
         [Header("Create Room")]
         [SerializeField] private TMP_InputField roomNameInput;
@@ -57,14 +62,23 @@ namespace MultiplayerGame.UI
             Debug.Log($"[RoomUI] Main Menu Panel: {(mainMenuPanel != null ? "✓" : "✗ NULL")}");
             Debug.Log($"[RoomUI] Create Room Panel: {(createRoomPanel != null ? "✓" : "✗ NULL")}");
             Debug.Log($"[RoomUI] Room Browser Panel: {(roomBrowserPanel != null ? "✓" : "✗ NULL")}");
+            Debug.Log($"[RoomUI] Room Browser Panel: {(roomBrowserPanel != null ? "✓" : "✗ NULL")}");
             Debug.Log($"[RoomUI] Lobby Panel: {(lobbyPanel != null ? "✓" : "✗ NULL")}");
+            
+            // // RUNTIME FIX: Create username input if missing
+            // if (usernameInput == null && mainMenuPanel != null)
+            // {
+            //     Debug.LogWarning("[RoomUI] ⚠ usernameInput is NULL! Creating runtime input in Main Menu...");
+            //     usernameInput = CreateRuntimeUsernameInput();
+            //     Debug.Log("[RoomUI] ✓ Runtime username input created in Main Menu");
+            // }
             
             // RUNTIME FIX: Create prefabs if they're missing
             if (roomListItemPrefab == null)
             {
+                // We don't need room list item prefab for the new flow, but keeping it to avoid errors if referenced
                 Debug.LogWarning("[RoomUI] ⚠ roomListItemPrefab is NULL! Creating runtime prefab...");
                 roomListItemPrefab = CreateRoomListItemPrefab();
-                Debug.Log("[RoomUI] ✓ Runtime room list item prefab created");
             }
             
             if (playerListItemPrefab == null)
@@ -73,6 +87,9 @@ namespace MultiplayerGame.UI
                 playerListItemPrefab = CreatePlayerListItemPrefab();
                 Debug.Log("[RoomUI] ✓ Runtime player list item prefab created");
             }
+
+            // SETUP JOIN ROOM UI
+            // SetupJoinRoomUI call removed (handled by MenuUISetup)
             
             // Setup button listeners - Main Menu
             if (mainMenuCreateButton != null)
@@ -116,6 +133,14 @@ namespace MultiplayerGame.UI
             else
                 Debug.LogWarning("[RoomUI] ✗ Back To Menu Button is NULL!");
 
+            if (joinWithCodeButton != null)
+            {
+                joinWithCodeButton.onClick.AddListener(OnJoinRoomByCode);
+                Debug.Log("[RoomUI] ✓ Join With Code Button listener added");
+            }
+            else
+                Debug.LogWarning("[RoomUI] ✗ Join With Code Button is NULL!");
+
             // Create Room
             if (confirmCreateButton != null)
             {
@@ -157,7 +182,9 @@ namespace MultiplayerGame.UI
                 NetworkManager.Instance.OnRoomCreated += OnRoomCreated;
                 NetworkManager.Instance.OnRoomJoined += OnRoomJoined;
                 NetworkManager.Instance.OnRoomLeft += OnRoomLeft;
+
                 NetworkManager.Instance.OnGameStarted += OnGameStartedFromNetwork;
+                NetworkManager.Instance.OnPlayerNamesUpdated += OnPlayerNamesUpdated;
                 NetworkManager.Instance.OnError += OnNetworkError;
                 Debug.Log("[RoomUI] ✓ Subscribed to NetworkManager events");
             }
@@ -181,6 +208,7 @@ namespace MultiplayerGame.UI
                 NetworkManager.Instance.OnRoomJoined -= OnRoomJoined;
                 NetworkManager.Instance.OnRoomLeft -= OnRoomLeft;
                 NetworkManager.Instance.OnGameStarted -= OnGameStartedFromNetwork;
+                NetworkManager.Instance.OnPlayerNamesUpdated -= OnPlayerNamesUpdated;
                 NetworkManager.Instance.OnError -= OnNetworkError;
             }
         }
@@ -189,10 +217,9 @@ namespace MultiplayerGame.UI
 
         private void OnShowRoomBrowser()
         {
-            Debug.Log("[RoomUI] OnShowRoomBrowser called");
+            Debug.Log("[RoomUI] OnShowRoomBrowser called (Showing Join by Code)");
             ShowPanel(roomBrowserPanel);
-            // Auto-refresh room list when showing browser
-            OnRefreshRooms();
+            // No longer fetching room list
         }
 
         private void OnBackToMainMenu()
@@ -203,8 +230,8 @@ namespace MultiplayerGame.UI
 
         private void OnRefreshRooms()
         {
-            Debug.Log("[RoomUI] OnRefreshRooms called");
-            NetworkManager.Instance?.GetRoomList(false);
+            // Deprecated for Room Code flow
+            // NetworkManager.Instance?.GetRoomList(false);
         }
 
         private void OnShowCreateRoom()
@@ -237,10 +264,13 @@ namespace MultiplayerGame.UI
             }
 
             bool isPrivate = privateToggle != null && privateToggle.isOn;
-            string password = isPrivate && passwordInput != null ? passwordInput.text : null;
 
-            Debug.Log($"[RoomUI] Creating room: {roomName}, MaxPlayers: {maxPlayers}, Private: {isPrivate}");
-            NetworkManager.Instance?.CreateRoom(roomName, maxPlayers, isPrivate, password);
+
+            string password = isPrivate && passwordInput != null ? passwordInput.text : null;
+            string username = usernameInput != null ? usernameInput.text : "";
+
+            Debug.Log($"[RoomUI] Creating room: {roomName}, MaxPlayers: {maxPlayers}, Private: {isPrivate}, User: {username}");
+            NetworkManager.Instance?.CreateRoom(roomName, maxPlayers, isPrivate, password, username);
         }
 
         private void OnCancelCreateRoom()
@@ -281,6 +311,8 @@ namespace MultiplayerGame.UI
 
         private void OnRoomListUpdated(List<Room> rooms)
         {
+            // Deprecated - we don't display the list anymore
+            return;
             Debug.Log($"[RoomUI] ========== OnRoomListUpdated called ==========");
             Debug.Log($"[RoomUI] Received {rooms?.Count ?? 0} rooms");
             Debug.Log($"[RoomUI] Room List Container: {(roomListContainer != null ? "✓" : "✗ NULL")}");
@@ -367,7 +399,7 @@ namespace MultiplayerGame.UI
                     var joinButton = item.transform.Find("JoinButton")?.GetComponent<Button>();
                     if (joinButton != null)
                     {
-                        string roomId = room.room_id;
+                        string roomId = room.join_code;
                         joinButton.onClick.AddListener(() => OnJoinRoom(roomId, room.is_private));
                         Debug.Log($"[RoomUI]   - ✓ Join button configured");
                     }
@@ -392,15 +424,17 @@ namespace MultiplayerGame.UI
 
         private void OnJoinRoom(string roomId, bool isPrivate)
         {
+            string username = usernameInput != null ? usernameInput.text : "";
+            
             if (isPrivate)
             {
                 // Show password dialog (simplified - you'd want a proper dialog)
                 string password = ""; // In a real implementation, show a password input dialog
-                NetworkManager.Instance?.JoinRoom(roomId, password);
+                NetworkManager.Instance?.JoinRoom(roomId, password, username);
             }
             else
             {
-                NetworkManager.Instance?.JoinRoom(roomId);
+                NetworkManager.Instance?.JoinRoom(roomId, null, username);
             }
         }
 
@@ -425,6 +459,14 @@ namespace MultiplayerGame.UI
             StartCoroutine(LoadGameSceneAsync());
         }
 
+        private void OnPlayerNamesUpdated()
+        {
+            if (NetworkManager.Instance.CurrentRoom != null)
+            {
+                ShowLobby(NetworkManager.Instance.CurrentRoom);
+            }
+        }
+
         private void OnNetworkError(string error)
         {
             Debug.LogError($"Network Error: {error}");
@@ -438,7 +480,7 @@ namespace MultiplayerGame.UI
         private void ShowLobby(Room room)
         {
             if (roomNameText != null)
-                roomNameText.text = room.name;
+                roomNameText.text = $"{room.name}\n<size=60%>Code: {room.join_code}</size>"; // Display Room Code
 
             if (playerCountText != null)
                 playerCountText.text = $"Players: {room.current_players.Count}/{room.max_players}";
@@ -492,7 +534,8 @@ namespace MultiplayerGame.UI
                     if (playerText != null)
                     {
                         string role = i < 2 ? $"Player {i + 1}" : "Spectator";
-                        playerText.text = $"{playerId} ({role})";
+                        string playerName = NetworkManager.Instance.GetPlayerName(playerId);
+                        playerText.text = $"{playerName} ({role})";
                         
                         // Color code
                         if (i == 0)
@@ -625,6 +668,90 @@ namespace MultiplayerGame.UI
 
             prefab.SetActive(false); // Prefabs should be inactive
             return prefab;
+        }
+
+        /// <summary>
+        /// Creates the username input field at runtime
+        /// </summary>
+        private TMP_InputField CreateRuntimeUsernameInput()
+        {
+            GameObject jsonObj = new GameObject("UsernameInput");
+            if (mainMenuPanel != null)
+                jsonObj.transform.SetParent(mainMenuPanel.transform, false);
+            
+            RectTransform rect = jsonObj.AddComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = new Vector2(0, 100); // Above buttons (assuming buttons are around 0 or below)
+            rect.sizeDelta = new Vector2(300, 40);
+
+            Image bg = jsonObj.AddComponent<Image>();
+            bg.color = new Color(0.1f, 0.1f, 0.1f, 0.8f);
+
+            TMP_InputField input = jsonObj.AddComponent<TMP_InputField>();
+            
+            // Text Area
+            GameObject textArea = new GameObject("TextArea");
+            textArea.transform.SetParent(jsonObj.transform, false);
+            RectTransform textAreaRect = textArea.AddComponent<RectTransform>();
+            textAreaRect.anchorMin = Vector2.zero;
+            textAreaRect.anchorMax = Vector2.one;
+            textAreaRect.offsetMin = new Vector2(10, 0);
+            textAreaRect.offsetMax = new Vector2(-10, 0);
+
+            // Placeholder
+            GameObject placeholderObj = new GameObject("Placeholder");
+            placeholderObj.transform.SetParent(textArea.transform, false);
+            RectTransform placeholderRect = placeholderObj.AddComponent<RectTransform>();
+            placeholderRect.anchorMin = Vector2.zero;
+            placeholderRect.anchorMax = Vector2.one;
+            TextMeshProUGUI placeholder = placeholderObj.AddComponent<TextMeshProUGUI>();
+            placeholder.text = "Enter Username...";
+            placeholder.fontSize = 20;
+            placeholder.color = new Color(0.5f, 0.5f, 0.5f, 0.5f);
+            placeholder.fontStyle = FontStyles.Italic;
+            placeholder.alignment = TextAlignmentOptions.Left;
+            
+            // Text
+            GameObject textObj = new GameObject("Text");
+            textObj.transform.SetParent(textArea.transform, false);
+            RectTransform textRect = textObj.AddComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            TextMeshProUGUI text = textObj.AddComponent<TextMeshProUGUI>();
+            text.fontSize = 20;
+            text.color = Color.white;
+            text.alignment = TextAlignmentOptions.Left;
+
+            input.textViewport = textAreaRect;
+            input.textComponent = text;
+            input.placeholder = placeholder;
+            input.fontAsset = placeholder.font; // Ensure font matches
+
+            return input;
+        }
+
+        #endregion
+
+        #region Join Room UI Setup
+
+        // UI Setup is now handled by MenuUISetup.cs
+
+        private void OnJoinRoomByCode()
+        {
+            if (roomCodeInput == null) return;
+            
+            string code = roomCodeInput.text.Trim();
+            if (string.IsNullOrEmpty(code))
+            {
+                Debug.LogWarning("Room code is empty");
+                return;
+            }
+
+            string username = usernameInput != null ? usernameInput.text : "";
+            Debug.Log($"[RoomUI] Joining room with code: {code}");
+            NetworkManager.Instance?.JoinRoom(code, null, username);
         }
 
         #endregion
