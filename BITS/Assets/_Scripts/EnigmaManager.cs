@@ -47,7 +47,7 @@ public class EnigmaManager : MonoBehaviour
     }
 
     private EnigmaData currentEnigma;
-    private const string BASE_URL = "http://localhost:8000/api/enigma/generate";
+    private const string BASE_URL = "http://10.166.9.144:8000/api/enigma/generate";
 
     private void Awake()
     {
