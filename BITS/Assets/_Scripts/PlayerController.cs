@@ -22,6 +22,12 @@ namespace MultiplayerGame
         private PlayerInput playerInput;
         private InputAction moveAction;
 
+
+        // Weapons
+        public GameObject paper;
+        public GameObject scissors;
+        public GameObject rock;
+
         public void Initialize(string playerId, bool isLocal)
         {
             this.playerId = playerId;
@@ -178,6 +184,7 @@ namespace MultiplayerGame
             
             // Send to network
             NetworkManager.Instance?.SendSwapWeaponAction(newWeapon.ToString().ToLower());
+            
         }
 
         /// <summary>
@@ -189,6 +196,26 @@ namespace MultiplayerGame
             Debug.Log($"[PlayerController] OnWeaponChange called: {newWeapon}");
             // Add custom weapon change logic here
             // e.g., update UI, play sound effects, change visual appearance, etc.
+            DeactivateAllWeapons();
+            switch (newWeapon)
+            {
+                case WeaponType.Paper:
+                    paper.SetActive(true);
+                    break;
+                case WeaponType.Rock:
+                    rock.SetActive(true);
+                    break;
+                case WeaponType.Scissors:
+                    scissors.SetActive(true);
+                    break;
+            }
+        }
+
+        void DeactivateAllWeapons()
+        {
+            paper.SetActive(false);
+            rock.SetActive(false);
+            scissors.SetActive(false);   
         }
 
         private void FixedUpdate()
