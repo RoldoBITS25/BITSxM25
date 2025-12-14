@@ -74,7 +74,13 @@ namespace MultiplayerGame
              // Get the nearest game object within interaction range
             GameObject nearestObject = GetNearestGameObject(interactionRange);
             
-            if (nearestObject == null) return;
+            Debug.Log($"[InteractionController] E pressed! Nearest object: {(nearestObject != null ? nearestObject.name : "NONE")}");
+            
+            if (nearestObject == null)
+            {
+                Debug.Log("[InteractionController] No object in range!");
+                return;
+            }
             
             // Check for TextDisplayObject first (works with any weapon)
             var textDisplay = nearestObject.GetComponent<TextDisplayObject>();
@@ -94,19 +100,26 @@ namespace MultiplayerGame
             
             // Interaction logic dependent on weapon
             if (playerController == null) playerController = GetComponent<PlayerController>();
-            if (playerController == null) return;
+            if (playerController == null)
+            {
+                Debug.LogWarning("[InteractionController] No PlayerController found!");
+                return;
+            }
             
             var weapon = playerController.CurrentWeapon;
+            Debug.Log($"[InteractionController] Current weapon: {weapon}");
             
             // Release if holding something and weapon is Paper
             if (weapon == WeaponType.Paper && heldObject != null)
             {
+                 Debug.Log("[InteractionController] Releasing held object");
                  ReleaseObject();
                  return;
             }
             
             if (weapon == WeaponType.Paper)
             {
+                 Debug.Log("[InteractionController] Paper weapon - attempting to grab");
                  // Grab - only if no object is currently held and object is grabbable
                  if (heldObject == null)
                  {
@@ -119,20 +132,24 @@ namespace MultiplayerGame
             }
             else if (weapon == WeaponType.Scissors)
             {
+                 Debug.Log("[InteractionController] Scissors weapon - attempting to cut");
                  // Cut - only if object is cuttable
                  // Try ICuttable first
                  var cuttable = nearestObject.GetComponent<ICuttable>();
                  if (cuttable != null)
                  {
+                     Debug.Log($"[InteractionController] Found ICuttable on {nearestObject.name}, CanBeCut: {cuttable.CanBeCut()}");
                      if (cuttable.CanBeCut())
                      {
+                         Debug.Log("[InteractionController] Cutting object!");
                          cuttable.OnCut(transform.position);
                          string id = GetObjectId(nearestObject);
                          if (id != null) NetworkManager.Instance?.SendCutAction(id, transform.position);
                      }
                  }
-                 else 
+                 else
                  {
+                     Debug.Log($"[InteractionController] No ICuttable found on {nearestObject.name}");
                      // Fallback to InteractableObject
                      var io = nearestObject.GetComponent<InteractableObject>();
                      if (io != null && io.CanBeCut())
@@ -144,12 +161,27 @@ namespace MultiplayerGame
             }
             else if (weapon == WeaponType.Rock)
             {
+                 Debug.Log("[InteractionController] Rock weapon - attempting to break");
+                 
+                 // Debug: List all components on the object
+                 var allComponents = nearestObject.GetComponents<Component>();
+                 Debug.Log($"[InteractionController] Object '{nearestObject.name}' has {allComponents.Length} components:");
+                 foreach (var comp in allComponents)
+                 {
+                     if (comp != null)
+                     {
+                         Debug.Log($"  - {comp.GetType().Name} (Full: {comp.GetType().FullName})");
+                     }
+                 }
+                 
                  // Break - only if object is breakable
                  var breakable = nearestObject.GetComponent<IBreakable>();
                  if (breakable != null)
                  {
+                      Debug.Log($"[InteractionController] Found IBreakable on {nearestObject.name}, CanBeBroken: {breakable.CanBeBroken()}");
                       if (breakable.CanBeBroken())
                       {
+                          Debug.Log("[InteractionController] Breaking object!");
                           breakable.OnBreak();
                           string id = GetObjectId(nearestObject);
                           if (id != null) NetworkManager.Instance?.SendBreakAction(id);
@@ -157,13 +189,14 @@ namespace MultiplayerGame
                  }
                  else
                  {
-                      // Fallback to InteractableObject
-                      var io = nearestObject.GetComponent<InteractableObject>();
-                      if (io != null && io.CanBeBroken())
-                      {
-                          io.OnBreak();
-                          NetworkManager.Instance?.SendBreakAction(io.ObjectId);
-                      }
+                     Debug.Log($"[InteractionController] No IBreakable found on {nearestObject.name}");
+                     // Fallback to InteractableObject
+                     var io = nearestObject.GetComponent<InteractableObject>();
+                     if (io != null && io.CanBeBroken())
+                     {
+                         io.OnBreak();
+                         NetworkManager.Instance?.SendBreakAction(io.ObjectId);
+                     }
                  }
             }
         }

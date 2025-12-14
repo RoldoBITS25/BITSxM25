@@ -1,20 +1,23 @@
 using UnityEngine;
 
-public class MovableObject : MonoBehaviour, IInteractable
+namespace MultiplayerGame
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+    public class MovableObject : MonoBehaviour, IInteractable
     {
-        
-    }
+        // Start is called once before the first execution of Update after the MonoBehaviour is created
+        void Start()
+        {
+            
+        }
 
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
-    public void Interact()
-    {
-//         Debug.Log("Interacting with Movable Object");
+        // Update is called once per frame
+        void Update()
+        {
+            
+        }
+        public void Interact()
+        {
+    //         Debug.Log("Interacting with Movable Object");
+        }
     }
 }

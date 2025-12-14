@@ -1,15 +1,17 @@
 using UnityEngine;
 
-public interface IBreakable
+namespace MultiplayerGame
 {
-    /// <summary>
-    /// Check if the object can currently be broken
-    /// </summary>
-    bool CanBeBroken();
-    
-    /// <summary>
-    /// Called when the object is broken
-    /// </summary>
-    void OnBreak();
+    public interface IBreakable
+    {
+        /// <summary>
+        /// Check if the object can currently be broken
+        /// </summary>
+        bool CanBeBroken();
+        
+        /// <summary>
+        /// Called when the object is broken
+        /// </summary>
+        void OnBreak();
+    }
 }
-

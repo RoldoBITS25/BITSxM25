@@ -1,4 +1,7 @@
-public interface IInteractable
+namespace MultiplayerGame
 {
-    void Interact();
+    public interface IInteractable
+    {
+        void Interact();
+    }
 }
