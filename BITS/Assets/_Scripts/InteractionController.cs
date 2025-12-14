@@ -85,11 +85,11 @@ namespace MultiplayerGame
                 return;
             }
             
-            // Check for TextDisplayObject first (works with any weapon)
-            var textDisplay = nearestObject.GetComponent<TextDisplayObject>();
-            if (textDisplay != null)
+            // Check for IReadable objects first (works with any weapon, local-only interaction)
+            var readable = nearestObject.GetComponent<IReadable>();
+            if (readable != null)
             {
-                textDisplay.OnInteract(playerId);
+                readable.OnInteract(playerId);
                 return;
             }
             

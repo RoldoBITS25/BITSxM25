@@ -1,3 +1,5 @@
+using System;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
@@ -7,8 +9,10 @@ namespace MultiplayerGame
 {
     /// <summary>
     /// Component for objects that display parametrized text when interacted with
+    /// Implements IReadable for consistent interaction handling
+    /// Reading interactions are local-only and do not send data to the backend
     /// </summary>
-    public class TextDisplayObject : MonoBehaviour
+    public class TextDisplayObject : MonoBehaviour, IReadable
     {
         [Header("Text Display Settings")]
         [SerializeField] [TextArea(3, 10)] private string displayText = "Hello, World!";
@@ -16,11 +20,13 @@ namespace MultiplayerGame
         [SerializeField] private float displayDuration = 3f; // How long to show the text (0 = until dismissed)
         
         [Header("UI Settings")]
-        [SerializeField] private Vector2 textBoxSize = new Vector2(400, 200);
+        [SerializeField] private Vector2 textBoxSize = new Vector2(600, 400);
         [SerializeField] private Color backgroundColor = new Color(0.1f, 0.1f, 0.1f, 0.9f);
         [SerializeField] private Color textColor = Color.white;
-        [SerializeField] private int fontSize = 24;
+        [SerializeField] private int fontSize = 16;
 
+        public bool isNote = false;
+        public int bookId = 0;
         private SpriteRenderer spriteRenderer;
         private MeshRenderer meshRenderer;
         private Color originalColor;
@@ -31,7 +37,6 @@ namespace MultiplayerGame
         private static GameObject textDisplayCanvas;
         private static GameObject textPanel;
         private static TextMeshProUGUI textComponent;
-        private static Button closeButton;
 
         private void Awake()
         {
@@ -68,7 +73,76 @@ namespace MultiplayerGame
             {
                 GameStateManager.Instance.RegisterObject(objectId, gameObject);
             }
+
+            // Wait for enigma data to be loaded, then load text
+            StartCoroutine(WaitAndLoadText());
+            
             // this.OnInteract("player1");
+        }
+
+        private IEnumerator WaitAndLoadText()
+        {
+            Debug.Log($"[TextDisplayObject] {gameObject.name} waiting for enigma data...");
+            
+            // Wait until EnigmaManager has loaded the enigma data
+            while (EnigmaManager.Instance.GetCurrentEnigma() == null)
+            {
+                yield return new WaitForSeconds(0.1f);
+            }
+
+            Debug.Log($"[TextDisplayObject] {gameObject.name} enigma data loaded, loading text now...");
+            
+            // Now load the text
+            LoadTextFromEnigmaManager();
+        }
+
+        /// <summary>
+        /// Load the appropriate text from EnigmaManager based on isNote and bookId
+        /// </summary>
+        public void LoadTextFromEnigmaManager()
+        {
+            Debug.Log($"[TextDisplayObject] LoadTextFromEnigmaManager called for {gameObject.name} (isNote={isNote}, bookId={bookId})");
+            
+            if (EnigmaManager.Instance == null)
+            {
+                Debug.LogWarning($"[TextDisplayObject] EnigmaManager not found for {gameObject.name}");
+                return;
+            }
+
+            if (isNote)
+            {
+                // This is the note/enigma
+                string enigmaText = EnigmaManager.Instance.GetEnigmaText();
+                Debug.Log($"[TextDisplayObject] Retrieved enigma text: '{enigmaText}'");
+                
+                if (!string.IsNullOrEmpty(enigmaText))
+                {
+                    displayText = enigmaText;
+                    Debug.Log($"[TextDisplayObject] ✓ Set displayText for Note to: '{displayText}'");
+                }
+                else
+                {
+                    Debug.LogWarning($"[TextDisplayObject] No enigma text available for Note");
+                }
+            }
+            else
+            {
+                // This is a book
+                string bookTitle = EnigmaManager.Instance.GetBookTitle(bookId);
+                string bookContent = EnigmaManager.Instance.GetBookContent(bookId);
+                
+                Debug.Log($"[TextDisplayObject] Retrieved book {bookId} - Title: '{bookTitle}', Content length: {bookContent?.Length ?? 0}");
+                
+                if (!string.IsNullOrEmpty(bookTitle) && !string.IsNullOrEmpty(bookContent))
+                {
+                    displayText = $"<b>{bookTitle}</b>\n\n{bookContent}";
+                    Debug.Log($"[TextDisplayObject] ✓ Set displayText for Book {bookId} to: '{displayText.Substring(0, Math.Min(100, displayText.Length))}...'");
+                }
+                else
+                {
+                    Debug.LogWarning($"[TextDisplayObject] No content available for Book {bookId}");
+                }
+            }
         }
 
         /// <summary>
@@ -106,6 +180,27 @@ namespace MultiplayerGame
         }
 
         /// <summary>
+        /// Display text with an optional color
+        /// </summary>
+        public void DisplayText(string text, Color color)
+        {
+            displayText = text;
+            if (textComponent != null)
+            {
+                textComponent.color = color;
+            }
+            ShowText();
+        }
+
+        /// <summary>
+        /// Display text with default color
+        /// </summary>
+        public void DisplayText(string text)
+        {
+            DisplayText(text, textColor);
+        }
+
+        /// <summary>
         /// Show the text display UI
         /// </summary>
         private void ShowText()
@@ -115,9 +210,16 @@ namespace MultiplayerGame
             isShowingText = true;
             textDisplayCanvas.SetActive(true);
             
+            Debug.Log($"[TextDisplayObject] ShowText() called for {gameObject.name}, displayText = '{displayText}'");
+            
             if (textComponent != null)
             {
                 textComponent.text = displayText;
+                Debug.Log($"[TextDisplayObject] Set textComponent.text to: '{textComponent.text}'");
+            }
+            else
+            {
+                Debug.LogWarning($"[TextDisplayObject] textComponent is null!");
             }
 
             // Auto-hide after duration if set
@@ -192,8 +294,8 @@ namespace MultiplayerGame
             textObject.transform.SetParent(textPanel.transform, false);
             
             RectTransform textRect = textObject.AddComponent<RectTransform>();
-            textRect.anchorMin = new Vector2(0.1f, 0.2f);
-            textRect.anchorMax = new Vector2(0.9f, 0.9f);
+            textRect.anchorMin = new Vector2(0.05f, 0.05f);
+            textRect.anchorMax = new Vector2(0.95f, 0.95f);
             textRect.offsetMin = Vector2.zero;
             textRect.offsetMax = Vector2.zero;
             
@@ -201,42 +303,8 @@ namespace MultiplayerGame
             textComponent.text = "Sample Text";
             textComponent.fontSize = fontSize;
             textComponent.color = textColor;
-            textComponent.alignment = TextAlignmentOptions.Center;
+            textComponent.alignment = TextAlignmentOptions.TopLeft;
             textComponent.enableWordWrapping = true;
-
-            // Create Close Button
-            GameObject buttonObject = new GameObject("CloseButton");
-            buttonObject.transform.SetParent(textPanel.transform, false);
-            
-            RectTransform buttonRect = buttonObject.AddComponent<RectTransform>();
-            buttonRect.anchorMin = new Vector2(0.5f, 0.1f);
-            buttonRect.anchorMax = new Vector2(0.5f, 0.1f);
-            buttonRect.pivot = new Vector2(0.5f, 0.5f);
-            buttonRect.sizeDelta = new Vector2(120, 40);
-            
-            Image buttonImage = buttonObject.AddComponent<Image>();
-            buttonImage.color = new Color(0.3f, 0.3f, 0.3f, 1f);
-            
-            closeButton = buttonObject.AddComponent<Button>();
-            closeButton.onClick.AddListener(() => {
-                HideText();
-            });
-
-            // Button Text
-            GameObject buttonTextObject = new GameObject("ButtonText");
-            buttonTextObject.transform.SetParent(buttonObject.transform, false);
-            
-            RectTransform buttonTextRect = buttonTextObject.AddComponent<RectTransform>();
-            buttonTextRect.anchorMin = Vector2.zero;
-            buttonTextRect.anchorMax = Vector2.one;
-            buttonTextRect.offsetMin = Vector2.zero;
-            buttonTextRect.offsetMax = Vector2.zero;
-            
-            TextMeshProUGUI buttonText = buttonTextObject.AddComponent<TextMeshProUGUI>();
-            buttonText.text = "Close";
-            buttonText.fontSize = 18;
-            buttonText.color = Color.white;
-            buttonText.alignment = TextAlignmentOptions.Center;
 
             // Start hidden
             textDisplayCanvas.SetActive(false);

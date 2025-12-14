@@ -12,12 +12,19 @@ public class Book
     public bool is_answer;
 }
 
+// Helper wrapper for deserializing books array
+[Serializable]
+public class BooksWrapper
+{
+    public Book[] books;
+}
+
 [Serializable]
 public class EnigmaData
 {
     public string word;
     public string enigma;
-    public List<Book> books;
+    public Book[] books; // Changed from List<Book> to Book[] for JsonUtility compatibility
     public string difficulty;
     public string category;
 }
@@ -51,6 +58,16 @@ public class EnigmaManager : MonoBehaviour
         }
         _instance = this;
         DontDestroyOnLoad(gameObject);
+        
+        // Automatically fetch enigma data when manager is created
+        Debug.Log("[EnigmaManager] Awake - Auto-fetching enigma data...");
+        FetchEnigma("easy", "general", 
+            onSuccess: (data) => {
+                Debug.Log($"[EnigmaManager] Auto-fetch successful! Word: {data.word}, Books: {data.books?.Length ?? 0}");
+            },
+            onError: (error) => {
+                Debug.LogError($"[EnigmaManager] Auto-fetch failed: {error}");
+            });
     }
 
     /// <summary>
@@ -68,6 +85,7 @@ public class EnigmaManager : MonoBehaviour
     private IEnumerator FetchEnigmaCoroutine(string difficulty, string category, Action<EnigmaData> onSuccess, Action<string> onError)
     {
         string url = $"{BASE_URL}?difficulty={difficulty}&category={category}";
+        Debug.Log($"[EnigmaManager] Fetching enigma from: {url}");
         
         using (UnityWebRequest request = UnityWebRequest.Get(url))
         {
@@ -78,9 +96,14 @@ public class EnigmaManager : MonoBehaviour
                 try
                 {
                     string jsonResponse = request.downloadHandler.text;
+                    Debug.Log($"[EnigmaManager] Raw JSON response: {jsonResponse}");
+                    
                     currentEnigma = JsonUtility.FromJson<EnigmaData>(jsonResponse);
                     
-                    Debug.Log($"Enigma fetched successfully: {currentEnigma.word}");
+                    Debug.Log($"[EnigmaManager] Enigma fetched successfully: {currentEnigma.word}");
+                    Debug.Log($"[EnigmaManager] Enigma text: {currentEnigma.enigma}");
+                    Debug.Log($"[EnigmaManager] Number of books: {currentEnigma.books?.Length ?? 0}");
+                    
                     onSuccess?.Invoke(currentEnigma);
                 }
                 catch (Exception e)
@@ -150,7 +173,7 @@ public class EnigmaManager : MonoBehaviour
         if (currentEnigma == null || currentEnigma.books == null)
             return null;
 
-        return currentEnigma.books.Find(book => book.is_answer);
+        return System.Array.Find(currentEnigma.books, book => book.is_answer);
     }
 
     /// <summary>
@@ -166,9 +189,9 @@ public class EnigmaManager : MonoBehaviour
             return null;
         }
 
-        if (index < 0 || index >= currentEnigma.books.Count)
+        if (index < 0 || index >= currentEnigma.books.Length)
         {
-            Debug.LogWarning($"Book index {index} is out of range. Available books: {currentEnigma.books.Count}");
+            Debug.LogWarning($"Book index {index} is out of range. Available books: {currentEnigma.books.Length}");
             return null;
         }
 
@@ -184,7 +207,38 @@ public class EnigmaManager : MonoBehaviour
         if (currentEnigma == null || currentEnigma.books == null)
             return 0;
 
-        return currentEnigma.books.Count;
+        return currentEnigma.books.Length;
+    }
+
+    /// <summary>
+    /// Gets the enigma text (the note/clue)
+    /// </summary>
+    /// <returns>The enigma text or null if no enigma is loaded</returns>
+    public string GetEnigmaText()
+    {
+        return currentEnigma?.enigma;
+    }
+
+    /// <summary>
+    /// Gets the title of a book by its index
+    /// </summary>
+    /// <param name="index">The index of the book (0-4)</param>
+    /// <returns>The book title or null if index is out of range</returns>
+    public string GetBookTitle(int index)
+    {
+        Book book = GetBookByIndex(index);
+        return book?.title;
+    }
+
+    /// <summary>
+    /// Gets the content of a book by its index
+    /// </summary>
+    /// <param name="index">The index of the book (0-4)</param>
+    /// <returns>The book content or null if index is out of range</returns>
+    public string GetBookContent(int index)
+    {
+        Book book = GetBookByIndex(index);
+        return book?.content;
     }
 
     /// <summary>

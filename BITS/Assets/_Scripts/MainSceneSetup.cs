@@ -58,6 +58,12 @@ namespace MultiplayerGame
         private GameObject environmentObj;
         private GameObject testPlayerObj;
 
+        private void Awake()
+        {
+            // Fetch enigma data as early as possible (before Start() is called on other objects)
+            SetupEnigma();
+        }
+
         private void Start()
         {
             if (autoSetupOnStart && !waitForRoomJoin)
@@ -90,6 +96,8 @@ namespace MultiplayerGame
             if (spawnDebugUI)
                 SetupDebugUI();
             
+            // Note: Enigma is fetched in Awake() to ensure it's available before Start()
+            
             if (spawnTestObjects)
                 SpawnTestObjects();
             
@@ -97,6 +105,24 @@ namespace MultiplayerGame
                 SpawnTestPlayer();
             
 // //             Debug.Log("Main scene setup complete!");
+        }
+
+        private void SetupEnigma()
+        {
+            // Fetch enigma with default parameters
+            EnigmaManager.Instance.FetchEnigma("easy", "general", 
+                onSuccess: (enigmaData) => {
+                    Debug.Log($"[MainSceneSetup] Enigma loaded successfully: {enigmaData.word}");
+                    // Notify all TextDisplayObjects to reload their text
+                    var textDisplayObjects = FindObjectsByType<TextDisplayObject>(FindObjectsSortMode.None);
+                    foreach (var textDisplay in textDisplayObjects)
+                    {
+                        textDisplay.LoadTextFromEnigmaManager();
+                    }
+                },
+                onError: (error) => {
+                    Debug.LogError($"[MainSceneSetup] Failed to load enigma: {error}");
+                });
         }
 
         private void SetupDebugUI()
