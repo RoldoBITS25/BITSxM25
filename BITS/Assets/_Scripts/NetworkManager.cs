@@ -922,6 +922,14 @@ namespace MultiplayerGame
         }
 
         /// <summary>
+        /// Send release action
+        /// </summary>
+        public void SendReleaseAction(string objectId)
+        {
+            SendPlayerAction("release", objectId);
+        }
+
+        /// <summary>
         /// Send cut action
         /// </summary>
         public void SendCutAction(string objectId, Vector3 cutPosition)

@@ -16,6 +16,7 @@ namespace MultiplayerGame
         private Color originalColor;
         private bool isGrabbed = false;
         private string currentHolderId;
+        private string objectId;
 
         private void Awake()
         {
@@ -23,6 +24,46 @@ namespace MultiplayerGame
             if (spriteRenderer != null)
             {
                 originalColor = spriteRenderer.color;
+            }
+
+            // Don't auto-generate ID here - wait for explicit initialization
+            // This allows for deterministic IDs based on position
+        }
+
+        /// <summary>
+        /// Initialize object with position-based deterministic ID
+        /// Call this after the object is positioned in the scene
+        /// </summary>
+        public void InitializeWithPosition()
+        {
+            if (string.IsNullOrEmpty(objectId))
+            {
+                // Generate deterministic ID based on position
+                Vector3 pos = transform.position;
+                objectId = $"GrabbableObject_{pos.x:F2}_{pos.y:F2}_{pos.z:F2}";
+                
+                // Register with GameStateManager if available
+                if (GameStateManager.Instance != null)
+                {
+                    GameStateManager.Instance.RegisterObject(objectId, gameObject);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Set a custom object ID (for backend-assigned IDs or other use cases)
+        /// </summary>
+        public void SetObjectId(string id)
+        {
+            if (!string.IsNullOrEmpty(id))
+            {
+                objectId = id;
+                
+                // Register with GameStateManager if available
+                if (GameStateManager.Instance != null)
+                {
+                    GameStateManager.Instance.RegisterObject(objectId, gameObject);
+                }
             }
         }
 
@@ -35,14 +76,32 @@ namespace MultiplayerGame
         {
             isGrabbed = true;
             currentHolderId = playerId;
-//             Debug.Log($"Object {gameObject.name} grabbed by player {playerId}");
+            Debug.Log($"Object {gameObject.name} (ID: {objectId}) grabbed by player {playerId}");
+
+            // Send grab action to backend
+            if (NetworkManager.Instance != null)
+            {
+                NetworkManager.Instance.SendGrabAction(objectId);
+            }
         }
 
         public void OnReleased()
         {
             isGrabbed = false;
+            string previousHolder = currentHolderId;
             currentHolderId = null;
-//             Debug.Log($"Object {gameObject.name} released");
+            Debug.Log($"Object {gameObject.name} (ID: {objectId}) released by player {previousHolder}");
+
+            // Send release action to backend
+            if (NetworkManager.Instance != null)
+            {
+                NetworkManager.Instance.SendReleaseAction(objectId);
+            }
+        }
+
+        public string GetObjectId()
+        {
+            return objectId;
         }
 
         public Transform GetTransform()

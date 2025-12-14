@@ -162,7 +162,14 @@ namespace MultiplayerGame
             if (controller != null)
             {
                 controller.Initialize(NetworkManager.Instance.PlayerId, true);
-//                 Debug.Log($"[GameStateManager] ✓ PlayerController initialized");
+                
+                // Auto-assign next available weapon
+                WeaponType assignedWeapon = GetNextAvailableWeapon();
+                controller.SetWeapon(assignedWeapon); // This will trigger OnWeaponChange
+                Debug.Log($"[GameStateManager] ✓ PlayerController initialized with weapon: {assignedWeapon}");
+                
+                // Send weapon to network
+                NetworkManager.Instance?.SendSwapWeaponAction(assignedWeapon.ToString().ToLower());
             }
             else
             {
@@ -327,7 +334,7 @@ namespace MultiplayerGame
                     var controller = player.GetComponent<PlayerController>();
                     if (controller != null)
                     {
-                        controller.CurrentWeapon = weapon;
+                        controller.SetWeapon(weapon); // This will trigger OnWeaponChange
                         Debug.Log($"[GameStateManager] ★ OTHER PLAYER ({playerId}) WEAPON: {weapon} ★");
                         
                         // Log all player weapons for full visibility
@@ -364,6 +371,27 @@ namespace MultiplayerGame
             }
             
             Debug.Log("========================================");
+        }
+
+        /// <summary>
+        /// Gets the next available weapon that is not taken by other players
+        /// Cycles through: Paper -> Scissors -> Rock
+        /// </summary>
+        private WeaponType GetNextAvailableWeapon()
+        {
+            WeaponType[] weaponOrder = { WeaponType.Paper, WeaponType.Scissors, WeaponType.Rock };
+            
+            foreach (WeaponType weapon in weaponOrder)
+            {
+                if (!IsWeaponTaken(weapon))
+                {
+                    return weapon;
+                }
+            }
+            
+            // If all weapons are taken (shouldn't happen with 2 players and 3 weapons), default to Paper
+            Debug.LogWarning("[GameStateManager] All weapons are taken! Defaulting to Paper.");
+            return WeaponType.Paper;
         }
 
         public bool IsWeaponTaken(WeaponType weapon)
@@ -432,39 +460,84 @@ namespace MultiplayerGame
 
         private void HandleGrabAction(string playerId, string objectId)
         {
-            if (spawnedObjects.TryGetValue(objectId, out GameObject obj))
+            GameObject obj = FindObjectById(objectId);
+            if (obj != null)
             {
+                // Try InteractableObject first (legacy)
                 var interactable = obj.GetComponent<InteractableObject>();
                 if (interactable != null)
                 {
                     interactable.OnGrabbed(playerId);
+                    return;
                 }
+                
+                // Try GrabbableObject
+                var grabbable = obj.GetComponent<GrabbableObject>();
+                if (grabbable != null)
+                {
+                    grabbable.OnGrabbed(playerId);
+                    return;
+                }
+            }
+            else
+            {
+                Debug.LogWarning($"[GameStateManager] Object not found for grab action: {objectId}");
             }
         }
 
         private void HandleCutAction(string objectId, Vector3 cutPosition)
         {
-            if (spawnedObjects.TryGetValue(objectId, out GameObject obj))
+            GameObject obj = FindObjectById(objectId);
+            if (obj != null)
             {
+                // Try InteractableObject first (legacy)
                 var interactable = obj.GetComponent<InteractableObject>();
                 if (interactable != null)
                 {
                     interactable.OnCut(cutPosition);
+                    return;
                 }
+                
+                // Try CuttableObject
+                var cuttable = obj.GetComponent<CuttableObject>();
+                if (cuttable != null)
+                {
+                    cuttable.OnCut(cutPosition);
+                    return;
+                }
+            }
+            else
+            {
+                Debug.LogWarning($"[GameStateManager] Object not found for cut action: {objectId}");
             }
         }
 
         private void HandleBreakAction(string objectId)
         {
-            if (spawnedObjects.TryGetValue(objectId, out GameObject obj))
+            GameObject obj = FindObjectById(objectId);
+            if (obj != null)
             {
+                // Try InteractableObject first (legacy)
                 var interactable = obj.GetComponent<InteractableObject>();
                 if (interactable != null)
                 {
                     interactable.OnBreak();
+                    spawnedObjects.Remove(objectId);
+                    return;
                 }
                 
-                spawnedObjects.Remove(objectId);
+                // Try BreakableObject
+                var breakable = obj.GetComponent<BreakableObject>();
+                if (breakable != null)
+                {
+                    breakable.OnBreak();
+                    spawnedObjects.Remove(objectId);
+                    return;
+                }
+            }
+            else
+            {
+                Debug.LogWarning($"[GameStateManager] Object not found for break action: {objectId}");
             }
         }
 
@@ -501,6 +574,53 @@ namespace MultiplayerGame
         public void UnregisterObject(string objectId)
         {
             spawnedObjects.Remove(objectId);
+        }
+
+        /// <summary>
+        /// Find an object by its ID, checking both the registry and scene objects
+        /// </summary>
+        private GameObject FindObjectById(string objectId)
+        {
+            // First check the registry
+            if (spawnedObjects.TryGetValue(objectId, out GameObject obj))
+            {
+                return obj;
+            }
+            
+            // Fallback: search all objects in scene with matching ID
+            // This handles objects that weren't explicitly registered
+            var grabbables = FindObjectsByType<GrabbableObject>(FindObjectsSortMode.None);
+            foreach (var grabbable in grabbables)
+            {
+                if (grabbable.GetObjectId() == objectId)
+                {
+                    // Register it now for future lookups
+                    spawnedObjects[objectId] = grabbable.gameObject;
+                    return grabbable.gameObject;
+                }
+            }
+            
+            var cuttables = FindObjectsByType<CuttableObject>(FindObjectsSortMode.None);
+            foreach (var cuttable in cuttables)
+            {
+                if (cuttable.GetObjectId() == objectId)
+                {
+                    spawnedObjects[objectId] = cuttable.gameObject;
+                    return cuttable.gameObject;
+                }
+            }
+            
+            var breakables = FindObjectsByType<BreakableObject>(FindObjectsSortMode.None);
+            foreach (var breakable in breakables)
+            {
+                if (breakable.GetObjectId() == objectId)
+                {
+                    spawnedObjects[objectId] = breakable.gameObject;
+                    return breakable.gameObject;
+                }
+            }
+            
+            return null;
         }
 
         /// <summary>

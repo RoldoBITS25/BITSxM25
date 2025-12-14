@@ -32,8 +32,45 @@ namespace MultiplayerGame
                 originalColor = spriteRenderer.color;
             }
 
-            // Generate unique ID for this object
-            objectId = System.Guid.NewGuid().ToString();
+            // Don't auto-generate ID here - wait for explicit initialization
+            // This allows for deterministic IDs based on position
+        }
+
+        /// <summary>
+        /// Initialize object with position-based deterministic ID
+        /// Call this after the object is positioned in the scene
+        /// </summary>
+        public void InitializeWithPosition()
+        {
+            if (string.IsNullOrEmpty(objectId))
+            {
+                // Generate deterministic ID based on position
+                Vector3 pos = transform.position;
+                objectId = $"BreakableObject_{pos.x:F2}_{pos.y:F2}_{pos.z:F2}";
+                
+                // Register with GameStateManager if available
+                if (GameStateManager.Instance != null)
+                {
+                    GameStateManager.Instance.RegisterObject(objectId, gameObject);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Set a custom object ID (for backend-assigned IDs or other use cases)
+        /// </summary>
+        public void SetObjectId(string id)
+        {
+            if (!string.IsNullOrEmpty(id))
+            {
+                objectId = id;
+                
+                // Register with GameStateManager if available
+                if (GameStateManager.Instance != null)
+                {
+                    GameStateManager.Instance.RegisterObject(objectId, gameObject);
+                }
+            }
         }
 
         public bool CanBeBroken()
@@ -44,7 +81,13 @@ namespace MultiplayerGame
         public void OnBreak()
         {
             hasBeenBroken = true;
-// //             Debug.Log($"Object {gameObject.name} broken");
+            Debug.Log($"Object {gameObject.name} (ID: {objectId}) broken");
+
+            // Send break action to backend
+            if (NetworkManager.Instance != null)
+            {
+                NetworkManager.Instance.SendBreakAction(objectId);
+            }
 
             // Spawn drop items if prefab is assigned
             if (dropPrefab != null)

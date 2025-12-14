@@ -35,6 +35,18 @@ namespace MultiplayerGame
             // }
         }
 
+        /// <summary>
+        /// Sets the weapon and triggers the OnWeaponChange callback
+        /// </summary>
+        public void SetWeapon(WeaponType weapon)
+        {
+            if (CurrentWeapon != weapon)
+            {
+                CurrentWeapon = weapon;
+                OnWeaponChange(weapon);
+            }
+        }
+
         private void Awake()
         {
             rb = GetComponent<Rigidbody>();
@@ -142,6 +154,9 @@ namespace MultiplayerGame
             // Optimistically update
             CurrentWeapon = newWeapon;
             
+            // Call weapon change callback
+            OnWeaponChange(newWeapon);
+            
             // Display current weapon
             Debug.Log($"[PlayerController] ★ CURRENT PLAYER WEAPON: {CurrentWeapon} ★");
             
@@ -153,6 +168,17 @@ namespace MultiplayerGame
             
             // Send to network
             NetworkManager.Instance?.SendSwapWeaponAction(newWeapon.ToString().ToLower());
+        }
+
+        /// <summary>
+        /// Called whenever the weapon changes
+        /// Override or extend this method to add custom behavior on weapon change
+        /// </summary>
+        protected virtual void OnWeaponChange(WeaponType newWeapon)
+        {
+            Debug.Log($"[PlayerController] OnWeaponChange called: {newWeapon}");
+            // Add custom weapon change logic here
+            // e.g., update UI, play sound effects, change visual appearance, etc.
         }
 
         private void FixedUpdate()

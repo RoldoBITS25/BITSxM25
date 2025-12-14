@@ -485,9 +485,29 @@ namespace MultiplayerGame
                 
                 obj.name = $"InteractableObject_{i:00}";
                 obj.transform.SetParent(testObjectsParent.transform);
+                
+                // Initialize object with position-based deterministic ID
+                // This must be done AFTER positioning the object
+                var grabbable = obj.GetComponent<GrabbableObject>();
+                if (grabbable != null)
+                {
+                    grabbable.InitializeWithPosition();
+                }
+                
+                var cuttable = obj.GetComponent<CuttableObject>();
+                if (cuttable != null)
+                {
+                    cuttable.InitializeWithPosition();
+                }
+                
+                var breakable = obj.GetComponent<BreakableObject>();
+                if (breakable != null)
+                {
+                    breakable.InitializeWithPosition();
+                }
             }
             
-// //             Debug.Log($"Spawned {numberOfTestObjects} test objects");
+//             Debug.Log($"Spawned {numberOfTestObjects} test objects");
         }
 
         private void SpawnTestPlayer()

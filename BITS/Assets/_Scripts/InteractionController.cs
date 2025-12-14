@@ -74,6 +74,24 @@ namespace MultiplayerGame
              // Get the nearest game object within interaction range
             GameObject nearestObject = GetNearestGameObject(interactionRange);
             
+            if (nearestObject == null) return;
+            
+            // Check for TextDisplayObject first (works with any weapon)
+            var textDisplay = nearestObject.GetComponent<TextDisplayObject>();
+            if (textDisplay != null)
+            {
+                textDisplay.OnInteract(playerId);
+                return;
+            }
+            
+            // Check for InputTextObject (works with any weapon)
+            var inputTextObject = nearestObject.GetComponent<InputTextObject>();
+            if (inputTextObject != null)
+            {
+                inputTextObject.OnInteract(playerId);
+                return;
+            }
+            
             // Interaction logic dependent on weapon
             if (playerController == null) playerController = GetComponent<PlayerController>();
             if (playerController == null) return;
@@ -86,18 +104,22 @@ namespace MultiplayerGame
                  ReleaseObject();
                  return;
             }
-
-            if (nearestObject == null) return;
             
             if (weapon == WeaponType.Paper)
             {
-                 // Grab
-                 var grabbable = nearestObject.GetComponent<IGrabbable>();
-                 if (grabbable != null) GrabObject(grabbable);
+                 // Grab - only if no object is currently held and object is grabbable
+                 if (heldObject == null)
+                 {
+                     var grabbable = nearestObject.GetComponent<IGrabbable>();
+                     if (grabbable != null && grabbable.CanBeGrabbed())
+                     {
+                         GrabObject(grabbable);
+                     }
+                 }
             }
             else if (weapon == WeaponType.Scissors)
             {
-                 // Cut
+                 // Cut - only if object is cuttable
                  // Try ICuttable first
                  var cuttable = nearestObject.GetComponent<ICuttable>();
                  if (cuttable != null)
@@ -122,13 +144,16 @@ namespace MultiplayerGame
             }
             else if (weapon == WeaponType.Rock)
             {
-                 // Break
+                 // Break - only if object is breakable
                  var breakable = nearestObject.GetComponent<IBreakable>();
                  if (breakable != null)
                  {
-                      breakable.OnBreak(); // Changed to OnBreak
-                      string id = GetObjectId(nearestObject);
-                      if (id != null) NetworkManager.Instance?.SendBreakAction(id);
+                      if (breakable.CanBeBroken())
+                      {
+                          breakable.OnBreak();
+                          string id = GetObjectId(nearestObject);
+                          if (id != null) NetworkManager.Instance?.SendBreakAction(id);
+                      }
                  }
                  else
                  {
