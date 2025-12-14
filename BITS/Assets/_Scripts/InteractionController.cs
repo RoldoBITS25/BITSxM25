@@ -26,6 +26,9 @@ namespace MultiplayerGame
         private PlayerInput playerInput;
         private InputAction interactAction;
         private PlayerController playerController;
+        
+        // Public property to check if holding an object
+        public bool IsHoldingObject => heldObject != null;
 
         public void Initialize(string playerId, bool isLocal)
         {
@@ -109,25 +112,41 @@ namespace MultiplayerGame
             var weapon = playerController.CurrentWeapon;
             Debug.Log($"[InteractionController] Current weapon: {weapon}");
             
-            // Release if holding something and weapon is Paper
-            if (weapon == WeaponType.Paper && heldObject != null)
+            // If holding an object, only allow releasing it
+            if (heldObject != null)
             {
-                 Debug.Log("[InteractionController] Releasing held object");
-                 ReleaseObject();
-                 return;
+                if (weapon == WeaponType.Paper)
+                {
+                    Debug.Log("[InteractionController] Releasing held object");
+                    ReleaseObject();
+                }
+                else
+                {
+                    Debug.Log("[InteractionController] Cannot interact while holding an object! Switch to Paper to release.");
+                }
+                return;
             }
             
             if (weapon == WeaponType.Paper)
             {
                  Debug.Log("[InteractionController] Paper weapon - attempting to grab");
                  // Grab - only if no object is currently held and object is grabbable
-                 if (heldObject == null)
+                 var grabbable = nearestObject.GetComponent<IGrabbable>();
+                 if (grabbable != null)
                  {
-                     var grabbable = nearestObject.GetComponent<IGrabbable>();
-                     if (grabbable != null && grabbable.CanBeGrabbed())
+                     Debug.Log($"[InteractionController] Found IGrabbable, CanBeGrabbed: {grabbable.CanBeGrabbed()}");
+                     if (grabbable.CanBeGrabbed())
                      {
                          GrabObject(grabbable);
                      }
+                     else
+                     {
+                         Debug.Log("[InteractionController] Object cannot be grabbed (already grabbed or disabled)");
+                     }
+                 }
+                 else
+                 {
+                     Debug.Log($"[InteractionController] No IGrabbable component found on {nearestObject.name}");
                  }
             }
             else if (weapon == WeaponType.Scissors)
@@ -225,7 +244,20 @@ namespace MultiplayerGame
                 // Attach object to player
                 Transform objTransform = obj.GetTransform();
                 objTransform.SetParent(transform);
-                objTransform.localPosition = new Vector2(0, 1);
+                
+                // Position on top of player - check if object has custom grab offset
+                Vector3 offset = new Vector3(0, 2f, 0); // Default: 2 units above player
+                
+                // Try to get custom offset from MovableObject
+                var movable = objTransform.GetComponent<MovableObject>();
+                if (movable != null)
+                {
+                    offset = movable.GetGrabOffset();
+                }
+                
+                objTransform.localPosition = offset;
+                
+                Debug.Log($"[InteractionController] Grabbed object positioned at local offset: {offset}");
             }
         }
 

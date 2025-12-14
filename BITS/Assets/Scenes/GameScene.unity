@@ -3314,8 +3314,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2018752103}
-  - component: {fileID: 2018752102}
   - component: {fileID: 2018752101}
+  - component: {fileID: 2018752104}
   m_Layer: 0
   m_Name: MovableObject
   m_TagString: Untagged
@@ -3344,7 +3344,23 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &2018752102
+--- !u!4 &2018752103
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2018752100}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.16, z: 0}
+  m_LocalScale: {x: 3.1496, y: 3.1496, z: 3.1496}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 471896829}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2018752104
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -3355,23 +3371,10 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a8fc4302ba0c87344823f1b32538132b, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::MovableObject
---- !u!4 &2018752103
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2018752100}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 3.1496, y: 3.1496, z: 3.1496}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 471896829}
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_EditorClassIdentifier: Assembly-CSharp::MultiplayerGame.MovableObject
+  canBeGrabbed: 1
+  highlightColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  grabOffset: {x: 0, y: 2, z: 0}
 --- !u!1 &2060769125
 GameObject:
   m_ObjectHideFlags: 0
